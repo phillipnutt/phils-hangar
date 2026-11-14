@@ -36,6 +36,7 @@ namespace PhilsReusabilitySuite
 
         ApplicationLauncherButton button;
         public bool Show;
+        bool shown;
         public int Tab;
         Rect rect = new Rect(160, 90, 960, 620);
         Vector2 scrollMain, scrollSide;
@@ -70,7 +71,9 @@ namespace PhilsReusabilitySuite
 
         void OnGUI()
         {
-            if (!Show) { InputLockManager.RemoveControlLock("PRSSuiteWindow"); return; }
+            if (!Show) { shown = false; InputLockManager.RemoveControlLock("PRSSuiteWindow"); return; }
+            // Opening it works everything out afresh; after that, only a change does (Suite.Generation).
+            if (!shown) { shown = true; Suite.Touch(); }
             GUI.skin = Look.Skin;
             if (TestOffset.HasValue) rect.position = Event.current.mousePosition + TestOffset.Value;
             rect = GUI.Window(GetInstanceID(), rect, Draw, GUIContent.none, Look.Window);
@@ -407,20 +410,32 @@ namespace PhilsReusabilitySuite
             GUILayout.EndVertical();
         }
 
-        // Restore (from its own blueprint), worked out for the picked ship at most every two seconds (not every frame).
+        // Phil (S12): an open suite window costs nothing you can feel. What it works out (quotes, prices, PIP's answers)
+        // is kept until something changes (Suite.Generation), not worked out again every frame.
+        readonly Dictionary<string, object> kept = new Dictionary<string, object>();
+        int keptGeneration = -1;
+
+        T Kept<T>(string key, Func<T> make)
+        {
+            if (keptGeneration != Suite.Generation) { kept.Clear(); keptGeneration = Suite.Generation; }
+            if (!kept.TryGetValue(key, out object v)) kept[key] = v = make();
+            return (T)v;
+        }
+
+        // Restore (from its own blueprint), worked out for the picked ship when it or anything else changes.
         BuildsLink.Restore restore;
         string restoreFor;
-        float restoreAt;
+        int restoreGeneration;
 
         BuildsLink.Restore RestoreFor(HangarShip h)
         {
             // A fuelled ship can still be short of parts (refuelled to fly as it is), so only a build stops a restore.
             if (h.ReservedBy != null) return null;
             // Worked out only at the start of a frame (Layout), so the panel's shape can't change between its events.
-            if (Event.current.type == EventType.Layout && (restoreFor != h.Id || Time.realtimeSinceStartup - restoreAt > 2f))
+            if (Event.current.type == EventType.Layout && (restoreFor != h.Id || restoreGeneration != Suite.Generation))
             {
                 restoreFor = h.Id;
-                restoreAt = Time.realtimeSinceStartup;
+                restoreGeneration = Suite.Generation;
                 try { restore = BuildsLink.RestoreOf(h, QuestionFor("restore:" + h.Id).Skip); }
                 catch (Exception ex) { restore = null; Log.Warn("Couldn't work out restoring " + h.DisplayName + ": " + ex.Message); }
             }
@@ -437,9 +452,11 @@ namespace PhilsReusabilitySuite
         /// </summary>
         void PipSection(PRSScenario sc, HangarShip h)
         {
-            string list = BehindList(h);
+            ShipPip pip = PipOf(sc, h);
+            string list = pip.List;
             if (list == null) return;
-            double price = sc.PipUpdatePrice(h.Craft.Children("PART"), out int n);
+            double price = pip.Price;
+            int n = pip.Behind;
             GUILayout.Space(8);
             GUILayout.Label("PIP PARTS · " + n + " BEHIND", Look.Section);
             // Phil: a ship's own old parts can fly as they are.
@@ -448,15 +465,19 @@ namespace PhilsReusabilitySuite
             if (GUILayout.Button("Update PIP parts · " + (price < 0.5 ? "free" : Pricing.Funds(price)), Look.Ghost, GUILayout.Height(30))) UpdateShip(sc, h, n);
         }
 
-        /// <summary>"Augur I Mk. 1 → Mk. 3, 2 × Hertz I Mk. 1 → Mk. 3" for a hangar ship's parts that are behind, or null.</summary>
-        static string BehindList(HangarShip h)
+        /// <summary>A hangar ship's PIP parts that are behind: how many, what updating them costs, and the list
+        /// ("Augur I Mk. 1 → Mk. 3, 2 × Hertz I Mk. 1 → Mk. 3"), null when none.</summary>
+        sealed class ShipPip { public string List; public int Behind; public double Price; }
+
+        ShipPip PipOf(PRSScenario sc, HangarShip h) => Kept("pip:" + h.Id, () =>
         {
             var behind = new List<string>();
             foreach (Node p in h.Craft.Children("PART"))
                 if (Pip.Behind(p, out string now, out string current) > 0) behind.Add(Pip.Change(now, current));
-            if (behind.Count == 0) return null;
-            return string.Join(", ", behind.GroupBy(x => x).Select(g => (g.Count() > 1 ? g.Count() + " × " : "") + g.Key).ToArray());
-        }
+            var pip = new ShipPip { Price = sc.PipUpdatePrice(h.Craft.Children("PART"), out int n), Behind = n };
+            if (behind.Count > 0) pip.List = string.Join(", ", behind.GroupBy(x => x).Select(g => (g.Count() > 1 ? g.Count() + " × " : "") + g.Key).ToArray());
+            return pip;
+        });
 
         void UpdateShip(PRSScenario sc, HangarShip h, int n)
         {
@@ -476,9 +497,11 @@ namespace PhilsReusabilitySuite
         bool AskOwnOldParts(PRSScenario sc, HangarShip h)
         {
             if (keepOldParts.Contains(h.Id)) return false;
-            string list = BehindList(h);
+            ShipPip pip = PipOf(sc, h);
+            string list = pip.List;
             if (list == null) return false;
-            double price = sc.PipUpdatePrice(h.Craft.Children("PART"), out int n);
+            double price = pip.Price;
+            int n = pip.Behind;
             string fee = price < 0.5 ? "free" : Pricing.Funds(price);
             GUILayout.BeginVertical(Look.Notice);
             GUILayout.Label("<color=#ffcf5a>" + h.DisplayName + " has " + (n == 1 ? "a PIP part" : n + " PIP parts") + " behind:</color> " + list
@@ -510,7 +533,7 @@ namespace PhilsReusabilitySuite
             GUILayout.Label(meta, Look.Meta);
             if (h.Missing > 0) GUILayout.Label("Missing " + Suite.Parts(h.Missing), Look.MetaWarn);
             if (Core.Wear.WornOut(h.Wear)) GUILayout.Label("Worn out: refurbish it before it flies again", Look.MetaBad);
-            int behind = h.Craft.Children("PART").Count(p => Pip.Behind(p) > 0);
+            int behind = PipOf(sc, h).Behind;
             if (behind > 0) GUILayout.Label((behind == 1 ? "1 PIP part" : behind + " PIP parts") + " behind the current Mk", Look.MetaWarn);
             GUILayout.EndVertical();
             GUILayout.FlexibleSpace();
@@ -530,7 +553,7 @@ namespace PhilsReusabilitySuite
             string under = BuildsLink.Under(h);
             if (under != null) GUILayout.Label("on " + under, Look.Meta);
             GUILayout.Label(Suite.Parts(h.PartCount) + " · " + (h.Flights == 0 ? "never flown" : h.Flights + (h.Flights == 1 ? " flight" : " flights")) + (h.Missing > 0 ? " · missing " + h.Missing : ""), Look.Meta);
-            string top = BuildsLink.HasPictures ? h.Ship.DesignId ?? BuildsLink.TopDesign(h.Craft) : null, below = BuildsLink.HasPictures ? BuildsLink.LauncherDesign(h.Craft) : null;
+            string top = BuildsLink.HasPictures ? h.Ship.DesignId ?? BuildsLink.TopDesign(h.Craft) : null, below = BuildsLink.HasPictures ? Kept("below:" + h.Id, () => BuildsLink.LauncherDesign(h.Craft)) : null;
             Texture2D topPic = BuildsLink.Picture(top), belowPic = BuildsLink.Picture(below);
             if (topPic != null || belowPic != null)
             {
@@ -545,7 +568,7 @@ namespace PhilsReusabilitySuite
             if (h.ReservedBy == null)
             {
                 bool worn = Core.Wear.WornOut(h.Wear);
-                Quote q = sc.QuoteFor(h);
+                Quote q = Kept("quote:" + h.Id, () => sc.QuoteFor(h));
                 bool canRefurbish = q.RefurbishPrice >= 0.5 || q.FuelPrice >= 0.5;
                 BuildsLink.Restore r = RestoreFor(h);
                 // Prices and the flight log scroll; the buttons stay at the bottom, however long the log gets.
@@ -622,14 +645,14 @@ namespace PhilsReusabilitySuite
                 GUILayout.BeginHorizontal();
                 GUILayout.FlexibleSpace();
                 // Its parts are refurbished as they go into the bin (Phil, round 4), so taking it apart costs that.
-                double apart = sc.TakeApartPrice(h);
+                double apart = Kept("apart:" + h.Id, () => sc.TakeApartPrice(h));
                 if (GUILayout.Button("Take apart" + (apart >= 0.5 ? " · refurbish " + Pricing.Funds(apart) : ""), Look.Link, GUILayout.ExpandWidth(false)))
                 {
                     if (sc.TakeApart(h, out string apartErr)) { selectedId = null; error = null; }
                     else error = apartErr;
                 }
                 GUILayout.Space(16);
-                if (Suite.Career && GUILayout.Button("Sell for scrap · +" + Pricing.Funds(sc.ScrapValue(h)), Look.Link, GUILayout.ExpandWidth(false))) { sc.Sell(h); selectedId = null; error = null; }
+                if (Suite.Career && GUILayout.Button("Sell for scrap · +" + Pricing.Funds(Kept("scrap:" + h.Id, () => sc.ScrapValue(h))), Look.Link, GUILayout.ExpandWidth(false))) { sc.Sell(h); selectedId = null; error = null; }
                 GUILayout.FlexibleSpace();
                 GUILayout.EndHorizontal();
             }
@@ -650,9 +673,36 @@ namespace PhilsReusabilitySuite
 
         // ---- Parts bin ----
 
+        /// <summary>The parts bin as its tab shows it: a row per kind of part (by name), and its old-Mk PIP parts.</summary>
+        sealed class BinView
+        {
+            public List<BinKind> Kinds;
+            public Dictionary<BinKind, string> Names = new Dictionary<BinKind, string>(), Behind = new Dictionary<BinKind, string>();
+            public Dictionary<BinKind, double> Scrap = new Dictionary<BinKind, double>();
+            public List<KeyValuePair<BinKind, int>> Old;
+            public double UpdatePrice;
+            public int OldParts;
+        }
+
+        BinView BinOf(PRSScenario sc) => Kept("bin", () =>
+        {
+            var v = new BinView();
+            foreach (BinKind k in sc.Bin.Where(k => k.Count > 0))
+            {
+                v.Names[k] = Pip.NameOf(k.Sample);
+                if (Pip.Behind(k.Sample, out string now, out string current) > 0) v.Behind[k] = Pip.Change(now, current);
+                v.Scrap[k] = sc.ScrapValue(k);
+            }
+            v.Kinds = v.Names.Keys.OrderBy(k => v.Names[k]).ToList();
+            v.Old = v.Kinds.Where(v.Behind.ContainsKey).Select(k => new KeyValuePair<BinKind, int>(k, k.Count)).ToList();
+            v.UpdatePrice = sc.PipUpdatePrice(v.Old, out v.OldParts);
+            return v;
+        });
+
         void BinTab(PRSScenario sc)
         {
-            List<BinKind> kinds = sc.Bin.Where(k => k.Count > 0).OrderBy(k => Pip.NameOf(k.Sample)).ToList();
+            BinView bin = BinOf(sc);
+            List<BinKind> kinds = bin.Kinds;
             scrollMain = GUILayout.BeginScrollView(scrollMain, GUILayout.ExpandWidth(true));
             GUILayout.BeginVertical(); GUILayout.Space(10);
             Indent(() => GUILayout.Label("Loose parts from ships taken apart, pieces with no engine or probe core, and dangling struts and fuel lines. Each was refurbished as it came in, so it's like a new part that's already paid for: builds use them in place of new parts.", Look.Hint));
@@ -664,19 +714,19 @@ namespace PhilsReusabilitySuite
                 {
                     GUILayout.BeginHorizontal(Look.Card);
                     GUILayout.BeginVertical();
-                    GUILayout.Label(Pip.NameOf(k.Sample), Look.Name);
-                    if (Pip.Behind(k.Sample, out string now, out string current) > 0)
-                        GUILayout.Label("Behind its program (" + Pip.Change(now, current) + "): update it before a build can use it", Look.MetaWarn);
+                    GUILayout.Label(bin.Names[k], Look.Name);
+                    if (bin.Behind.TryGetValue(k, out string change))
+                        GUILayout.Label("Behind its program (" + change + "): update it before a build can use it", Look.MetaWarn);
                     GUILayout.EndVertical();
                     GUILayout.FlexibleSpace();
                     GUILayout.Label("× " + k.Count, Look.RowVal, GUILayout.Width(50));
-                    if (Suite.Career && GUILayout.Button("Sell · +" + Pricing.Funds(sc.ScrapValue(k)), Look.Ghost, GUILayout.Height(26), GUILayout.Width(120))) sc.Sell(new[] { k });
+                    if (Suite.Career && GUILayout.Button("Sell · +" + Pricing.Funds(bin.Scrap[k]), Look.Ghost, GUILayout.Height(26), GUILayout.Width(120))) sc.Sell(new[] { k });
                     GUILayout.EndHorizontal();
                 });
             }
             GUILayout.EndVertical();
             GUILayout.EndScrollView();
-            List<KeyValuePair<BinKind, int>> old = kinds.Where(k => Pip.Behind(k.Sample) > 0).Select(k => new KeyValuePair<BinKind, int>(k, k.Count)).ToList();
+            List<KeyValuePair<BinKind, int>> old = bin.Old;
             bool sell = Suite.Career && kinds.Count > 0;
             if (sell || old.Count > 0)
             {
@@ -684,7 +734,7 @@ namespace PhilsReusabilitySuite
                 GUILayout.Space(10);
                 if (sell)
                 {
-                    double all = kinds.Sum(sc.ScrapValue);
+                    double all = kinds.Sum(k => bin.Scrap[k]);
                     GUILayout.Label(Suite.Parts(kinds.Sum(k => k.Count)) + " · scrap value " + Pricing.Funds(all), Look.Meta);
                     if (GUILayout.Button("Sell all for scrap", Look.Ghost, GUILayout.Height(32))) sc.Sell(kinds);
                 }
@@ -692,7 +742,8 @@ namespace PhilsReusabilitySuite
                 {
                     // Phil's design (play-test 2026-11-08 #5): old-Mk parts are updated here, or when a build asks.
                     GUILayout.Space(10);
-                    double price = sc.PipUpdatePrice(old, out int n);
+                    double price = bin.UpdatePrice;
+                    int n = bin.OldParts;
                     GUILayout.Label((n == 1 ? "1 PIP part is" : n + " PIP parts are") + " behind the current Mk. Builds use them only once they're updated.", Look.Meta);
                     if (GUILayout.Button("Update PIP parts · " + (price < 0.5 ? "free" : Pricing.Funds(price)), Look.Ghost, GUILayout.Height(32)))
                     {

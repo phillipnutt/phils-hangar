@@ -20,6 +20,32 @@ namespace PhilsReusabilitySuite
             }
         }
 
+        /// <summary>
+        /// Moves on whenever anything a suite window shows may have changed: the suite's own records, funds, a recovery,
+        /// research, a part bought, the game's settings, a scene, or the suite window opening. Windows keep what they work
+        /// out (prices, Phil's Iterative Parts' answers) until it does (Phil, S12: an open suite window costs nothing you
+        /// can feel).
+        /// </summary>
+        public static int Generation { get; private set; }
+
+        public static void Touch() { Generation++; }
+
+        static bool watching;
+
+        /// <summary>Hooks the game's events that move Generation on, once for the whole game.</summary>
+        public static void WatchForChanges()
+        {
+            if (watching) return;
+            watching = true;
+            GameEvents.onGameSceneLoadRequested.Add(scene => Touch());
+            GameEvents.onVesselRecovered.Add((pv, quick) => Touch());
+            GameEvents.OnFundsChanged.Add((funds, why) => Touch());
+            GameEvents.OnTechnologyResearched.Add(tech => Touch());
+            GameEvents.OnPartPurchased.Add(part => Touch());
+            // A lambda, not the static method itself: KSP's events need a delegate with a target object.
+            GameEvents.OnGameSettingsApplied.Add(() => Touch());
+        }
+
         /// <summary>"1 part", "27 parts".</summary>
         public static string Parts(int n) => n + (n == 1 ? " part" : " parts");
 

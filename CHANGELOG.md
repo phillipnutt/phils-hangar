@@ -7,6 +7,10 @@ From Phil's play on his new career:
   too. The Recover prompt still leaves the camera free to look the ship over, except while the mouse is on the prompt.
 - **Cancelling a refit and starting it again keeps it the same ship:** same number, same history. (Bering I #1,
   cancelled and built again, came out as a new Bering I #2 with one flight.)
+- **An open suite window costs nothing you can feel.** It made the Space Center stutter: it worked out the picked
+  ship's prices several times a frame, and asked Phil's Iterative Parts again every two seconds about each old-Mk part
+  it showed. It now works them out once and keeps them until something changes (a build, a recovery, funds, research,
+  a scene, or opening the window).
 
 From Phil's sixth play-test (round 4): ship identity rebuilt. A ship's name, number, flights and log are the suite's
 own record now, not copies kept on every part, and nothing guesses who a ship is from its parts any more.

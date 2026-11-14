@@ -82,6 +82,41 @@ namespace PhilsReusabilitySuite
             ScreenCapture.CaptureScreenshot(Path.Combine(dir, "prs_" + name + ".png"));
         }
 
+        int pipLines;
+
+        /// <summary>
+        /// Phil (S12): the suite's window made the Space Center stutter. Frame times, memory churned, garbage collections
+        /// and PIP's "Brought ... to the current Mk" lines over a few seconds; the PIP line count is left in pipLines.
+        /// </summary>
+        IEnumerator Measure(string what, float seconds)
+        {
+            yield return new WaitForSeconds(1f);
+            var frames = new List<float>();
+            int lines = 0;
+            Application.LogCallback count = (msg, trace, type) => { if (msg != null && msg.StartsWith("[PIP] Brought", StringComparison.Ordinal)) lines++; };
+            Application.logMessageReceived += count;
+            long churn = 0, last = GC.GetTotalMemory(false);
+            int gcs = GC.CollectionCount(0);
+            float end = Time.realtimeSinceStartup + seconds;
+            yield return null;
+            while (Time.realtimeSinceStartup < end)
+            {
+                yield return null;
+                frames.Add(Time.unscaledDeltaTime * 1000f);
+                long now = GC.GetTotalMemory(false);
+                if (now > last) churn += now - last;
+                last = now;
+            }
+            Application.logMessageReceived -= count;
+            gcs = GC.CollectionCount(0) - gcs;
+            frames.Sort();
+            float median = frames[frames.Count / 2], p99 = frames[Math.Min(frames.Count - 1, (int)(frames.Count * 0.99f))], max = frames[frames.Count - 1];
+            Note("S12 " + what + ": " + frames.Count + " frames, median " + median.ToString("0.0") + " ms, 99th " + p99.ToString("0.0") + " ms, worst " + max.ToString("0.0")
+                 + " ms, " + frames.Count(f => f > 2 * median + 5) + " hitches; " + (churn / 1024 / seconds).ToString("0") + " KB/s churned, " + gcs + " collections; "
+                 + lines + " PIP update lines");
+            pipLines = lines;
+        }
+
         IEnumerator ToEditor()
         {
             GamePersistence.SaveGame("persistent", HighLogic.SaveFolder, SaveMode.OVERWRITE);
@@ -256,6 +291,7 @@ namespace PhilsReusabilitySuite
             try { factory?.GetMethod("Refresh", BindingFlags.Public | BindingFlags.Static, null, new[] { program.GetType() }, null)?.Invoke(null, new[] { program }); }
             catch (Exception ex) { Note("PIP's part refresh after the Mk change: " + (ex.InnerException ?? ex).Message); }
             Check((int)Member(program, "Mk") == 3, "the program reached Mk 3 (" + Member(program, "Mk") + ")");
+            Suite.Touch();   // as a recovery does when PIP's Mk moves in play
             Node hwA = flown.Children("PART").First();
             int behind = Pip.Behind(hwA, out string now, out string current);
             Check(behind == 2 && now == "Testcell I Mk. 1" && current == "Testcell I Mk. 3", "the flown battery is 2 Marks behind: " + now + " → " + current);
@@ -310,6 +346,22 @@ namespace PhilsReusabilitySuite
             // 8. Back at the Space Center: the old-Mk bin battery fits the design, so a build offers it, doesn't use it.
             yield return ToSpaceCenter();
             sc = PRSScenario.Instance;
+
+            // S12 (Phil: "reusability ... slows down the game, gets it a little stuttery" at the Space Center): an open
+            // suite window costs nothing you can feel. Shut, then on the hangar ship with its Mk 1 battery, then on the
+            // parts bin with its Mk 1 battery: PIP isn't asked to update anything while the window just shows them.
+            if (SuiteWindow.Instance != null)
+            {
+                SuiteWindow.Instance.Show = false;
+                yield return Measure("window shut", 8f);
+                SuiteWindow.Instance.ShowHangarShip(hId);
+                yield return Measure("hangar ship open", 8f);
+                int shipLines = pipLines;
+                SuiteWindow.Instance.Tab = 2;
+                yield return Measure("parts bin open", 8f);
+                SuiteWindow.Instance.Show = false;
+                Check(shipLines == 0 && pipLines == 0, "an open suite window doesn't keep asking PIP to update the parts it shows (" + shipLines + " and " + pipLines + " update lines)");
+            }
             item = BuildsLink.Library().FirstOrDefault(i => i.Design.Id == d.Id);
             Owner offer = item?.Quote.OldBin.FirstOrDefault();
             oldB = sc.Bin.FirstOrDefault(k => k.Count > 0 && MkIn(k.Sample) == "1");

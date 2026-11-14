@@ -33,6 +33,7 @@ namespace PhilsReusabilitySuite
             BuildsApi.SetCopies(this);
             Log.Info("Linked with Phil's Builds (API " + BuildsApi.Version + ")");
             Pip.Find();
+            Suite.WatchForChanges();
         }
 
         /// <summary>Asks Phil's Builds to redraw its window, after the hangar changed.</summary>

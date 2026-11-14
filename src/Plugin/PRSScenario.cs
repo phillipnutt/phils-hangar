@@ -380,8 +380,8 @@ namespace PhilsReusabilitySuite
 
         readonly HashSet<uint> moneyDone = new HashSet<uint>();
 
-        /// <summary>The hangar, bin or queue changed: Phil's Builds' window redraws its hangar copies.</summary>
-        internal void Changed() { BuildsLink.HangarChanged(); }
+        /// <summary>The hangar, bin or queue changed: the suite's windows and Phil's Builds' window work them out again.</summary>
+        internal void Changed() { Suite.Touch(); BuildsLink.HangarChanged(); }
 
         /// <summary>KSP part ids that broke off in a hard landing, set by stage recovery just before it recovers.</summary>
         public readonly HashSet<uint> LeftBehindOnNextRecovery = new HashSet<uint>();

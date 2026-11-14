@@ -72,7 +72,11 @@ namespace PhilsReusabilitySuite
             catch (Exception ex) { Log.Warn("Couldn't link with Phil's Iterative Parts: " + ex.Message); }
         }
 
-        /// <summary>What PIP says about one part, kept for a couple of seconds: windows ask every frame.</summary>
+        /// <summary>
+        /// What PIP says about one part, kept until something changes (Suite.Generation: a recovery, a scene, funds...).
+        /// Windows ask every frame, and asking again brings a copy of each old part up to date (Phil, S12: that made the
+        /// Space Center stutter when it was asked again every two seconds).
+        /// </summary>
         sealed class MkInfo
         {
             public int Behind;
@@ -80,7 +84,7 @@ namespace PhilsReusabilitySuite
             /// <summary>For a part that's behind: a copy of it brought up to date (what an update would make it).</summary>
             public Node Preview;
             public bool Previewed;
-            public float At;
+            public int Generation;
         }
 
         static readonly Dictionary<Node, MkInfo> cache = new Dictionary<Node, MkInfo>();
@@ -88,10 +92,9 @@ namespace PhilsReusabilitySuite
 
         static MkInfo Info(Node part)
         {
-            float t = UnityEngine.Time.realtimeSinceStartup;
-            if (cache.TryGetValue(part, out MkInfo had) && t - had.At < 2f) return had;
+            if (cache.TryGetValue(part, out MkInfo had) && had.Generation == Suite.Generation) return had;
             if (cache.Count > 4000) cache.Clear();
-            var info = new MkInfo { At = t };
+            var info = new MkInfo { Generation = Suite.Generation };
             try
             {
                 if (BehindOf != null) info.Behind = Math.Max(0, BehindOf(part, out info.Now, out info.Current));

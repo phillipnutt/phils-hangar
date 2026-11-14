@@ -590,6 +590,7 @@ namespace PhilsReusabilitySuite
             };
             Pip.MakeCurrentOf = p => { Node m = FakePip(p); if (m == null || m.Get("mk") == "3") return false; m.Set("mk", "3"); return true; };
             Pip.TitleOf = p => mkOf(p) > 0 ? "Fake I Mk. " + mkOf(p) : null;
+            Suite.Touch();   // what PIP said before the fake doesn't count
 
             PRSScenario sc = PRSScenario.Instance;
             string err;
@@ -655,6 +656,7 @@ namespace PhilsReusabilitySuite
             Pip.BehindOf = realBehind;
             Pip.MakeCurrentOf = realCurrent;
             Pip.TitleOf = realTitle;
+            Suite.Touch();
         }
     }
 }
