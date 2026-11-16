@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+From the code scan (2026-11-16):
+- **Moving a ship between the VAB and the SPH keeps it the ship you opened.** After the switch button, Build made a new
+  ship, and the hangar ship you'd opened left the hangar with its number, flights and log; Phil's Iterative Parts also
+  gave its flown parts the newest Mk for free. The Build panel showed the design's name without the ship's number.
+
 From Phil's play on his new career:
 - **Scrolling over a suite window scrolls only the window.** At the Space Center the scroll wheel zoomed the camera
   too. The Recover prompt still leaves the camera free to look the ship over, except while the mouse is on the prompt.

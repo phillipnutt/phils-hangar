@@ -159,13 +159,18 @@ namespace PhilsReusabilitySuite
         void OnShipModified(ShipConstruct ship) { Check(ship); }
 
         /// <summary>A new ship (New, or a load): only what the suite is bringing in is hardware now, and only a ship the
-        /// suite is opening is opened. Not when KSP brings the ship back from its cache.</summary>
+        /// suite is opening is opened. Not when KSP brings the ship back from its cache: as the editor opens, or when the
+        /// ship moves between the VAB and the SPH (it's the same ship, so it's still the one that was opened).</summary>
         void OnEditorRestart()
         {
-            if (restoringCache) return;
+            if (restoringCache || Switching) return;
             live.Clear();
             if (!Expected(OpenedCraft)) OpenedCraft = null;
         }
+
+        /// <summary>KSP is moving the editor's ship to the other building (its switch button). KSP sets this flag only
+        /// there, and clears it once the editor has started again.</summary>
+        static bool Switching => EditorDriver.fetch != null && EditorDriver.fetch.restartingEditor;
 
         /// <summary>KSP's craft browser (and the suite's own loads) fire this with the loaded ship, or with a merge's parts.</summary>
         void OnEditorLoad(ShipConstruct ship, CraftBrowserDialog.LoadType type)
