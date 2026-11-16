@@ -268,7 +268,7 @@ namespace PhilsReusabilitySuite
 
         /// <summary>
         /// What recovering one launch's parts does: the ship they come home as (or none, and why), and which parts go to
-        /// the parts bin. One rule, worked out the same way for the recovery itself and for the
+        /// the parts bin, as they came home. One rule, worked out the same way for the recovery itself and for the
         /// Recover prompt's price (code scan R3: the prompt said "free", then recovery charged for parts added in flight,
         /// parts it couldn't place and struts whose other end was gone).
         /// </summary>
@@ -286,7 +286,7 @@ namespace PhilsReusabilitySuite
             /// <summary>Parts that came home but aren't the launch's (added in flight, or by EVA construction).</summary>
             public readonly List<ProtoPartSnapshot> Strangers = new List<ProtoPartSnapshot>();
             public double Wear;
-            /// <summary>The parts that go to the parts bin.</summary>
+            /// <summary>The parts that go to the parts bin, each as it came home.</summary>
             public readonly List<Node> ToBin = new List<Node>();
         }
 
@@ -329,9 +329,17 @@ namespace PhilsReusabilitySuite
             List<Node> launchParts = rec.Craft.Children("PART").ToList();
             IEnumerable<int> binned = lr.Ship == null ? lr.At.Keys : lr.Piece.Unplaced.Concat(lr.Piece.Dropped);
             foreach (int i in binned)
-                if (i >= 0 && i < launchParts.Count) lr.ToBin.Add(launchParts[i]);
+                if (i >= 0 && i < launchParts.Count) lr.ToBin.Add(AsCameHome(launchParts[i], lr.At.TryGetValue(i, out ProtoPartSnapshot ps) ? ps : null));
             lr.ToBin.AddRange(lr.Strangers.Select(PartNodeFrom));
             return lr;
+        }
+
+        /// <summary>A launch part as it came home: its cargo as it is now (code scan R2).</summary>
+        static Node AsCameHome(Node launched, ProtoPartSnapshot ps)
+        {
+            Node n = launched.Clone();
+            if (ps != null) CarryInventory(ps, n);
+            return n;
         }
 
         void RecoverLaunch(ProtoVessel pv, List<ProtoPartSnapshot> parts)
@@ -383,18 +391,55 @@ namespace PhilsReusabilitySuite
                      + (binned > 0 ? ", " + binned + " to the parts bin" : ""));
         }
 
-        /// <summary>A part's inventory module (KSP's cargo) as the part came home, in place of the one it launched with.</summary>
+        /// <summary>
+        /// A part's inventory module (KSP's cargo) as the part came home, in place of the one it launched with, and the
+        /// part's price and mass with it: KSP keeps what the cargo adds in the part's own module cost and mass, so cargo
+        /// used up or taken out in flight comes off those too (code scan R2).
+        /// </summary>
         static void CarryInventory(ProtoPartSnapshot ps, Node part)
         {
             List<ProtoPartModuleSnapshot> now = ps.modules.Where(m => m.moduleName == "ModuleInventoryPart" && m.moduleValues != null).ToList();
             int k = 0;
+            double cost = 0, mass = 0;
             for (int j = 0; j < part.Nodes.Count && k < now.Count; j++)
             {
                 if (part.Nodes[j].Name != "MODULE" || part.Nodes[j].Get("name") != "ModuleInventoryPart") continue;
                 Node m = KspNodes.FromKsp(now[k++].moduleValues);
                 m.Name = "MODULE";
                 if (m.Get("name") == null) m.Values.Insert(0, new KeyValuePair<string, string>("name", "ModuleInventoryPart"));
+                InventoryValue(part.Nodes[j], out double launchedCost, out double launchedMass);
+                InventoryValue(m, out double nowCost, out double nowMass);
+                cost += nowCost - launchedCost;
+                mass += nowMass - launchedMass;
                 part.Nodes[j] = m;
+            }
+            if (Math.Abs(cost) > 1e-4) part.Set("modCost", ((float)(LaunchRecord.Num(part.Get("modCost")) + cost)).ToString("R", CultureInfo.InvariantCulture));
+            if (Math.Abs(mass) > 1e-7) part.Set("modMass", ((float)(LaunchRecord.Num(part.Get("modMass")) + mass)).ToString("R", CultureInfo.InvariantCulture));
+        }
+
+        /// <summary>What a KSP inventory's stored parts add to the part holding it, as KSP works it out: each stored part's
+        /// price with what it holds, and its mass with what it holds, times how many are stacked in its slot.</summary>
+        internal static void InventoryValue(Node module, out double cost, out double mass)
+        {
+            cost = mass = 0;
+            Node stored = module?.Child("STOREDPARTS");
+            if (stored == null) return;
+            foreach (Node slot in stored.Children("STOREDPART"))
+            {
+                Node p = slot.Child("PART");
+                AvailablePart ap = p != null ? PartLoader.getPartInfoByName(p.Get("name") ?? slot.Get("partName")) : null;
+                if (ap == null) continue;
+                ShipConstruction.GetPartCostsAndMass(KspNodes.ToKsp(p, "PART"), ap, out float dry, out float fuel, out float dryMass, out float fuelMass);
+                double held = 0;
+                foreach (Node r in p.Children("RESOURCE"))
+                {
+                    PartResourceDefinition def = PartResourceLibrary.Instance?.GetDefinition(r.Get("name"));
+                    if (def != null) held += LaunchRecord.Num(r.Get("amount")) * def.density;
+                }
+                double own = p.Get("mass") != null ? LaunchRecord.Num(p.Get("mass")) : dryMass;
+                int count = Math.Max(1, (int)LaunchRecord.Num(slot.Get("quantity")));
+                cost += (dry + fuel) * count;
+                mass += (own + held) * count;
             }
         }
 

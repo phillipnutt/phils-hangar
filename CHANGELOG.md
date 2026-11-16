@@ -9,6 +9,9 @@ From the code scan (2026-11-16):
 - **The Recover prompt shows what recovery charges.** It could say "free" and then charge for refurbishing parts into
   the parts bin: parts added in flight, parts that can't be put back on the ship, and struts or fuel lines whose other
   end didn't come home.
+- **Cargo used up in flight comes off the ship's price.** A ship that came home with less in its inventory was still
+  priced with the cargo it launched with, so it lost "Launch as it is", and Refurbish, Take apart, Sell and the parts
+  bin counted cargo that wasn't there any more.
 
 From Phil's play on his new career:
 - **Scrolling over a suite window scrolls only the window.** At the Space Center the scroll wheel zoomed the camera
