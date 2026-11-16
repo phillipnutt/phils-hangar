@@ -122,7 +122,7 @@ namespace PhilsReusabilitySuite
 
         // ---- The ship ----
 
-        sealed class Bit { public string Part, Program; public int Parent = -1; public bool Radial; public float X; public int StrutTo = -1; public bool Decoupler; }
+        sealed class Bit { public string Part, Program; public int Parent = -1; public bool Radial, Above; public float X; public int StrutTo = -1; public bool Decoupler; }
 
         /// <summary>The ship as a craft file (PIP fills in its part's build). A strut is a surface part with its target's
         /// craft id in PARTDATA, as KSP saves one.</summary>
@@ -142,6 +142,12 @@ namespace PhilsReusabilitySuite
                 AvailablePart ap = PartLoader.getPartInfoByName(b.Part);
                 if (b.Parent < 0) y[i] = 10;
                 else if (b.Radial) y[i] = y[b.Parent];
+                else if (b.Above)
+                {
+                    AttachNode pt = PartLoader.getPartInfoByName(bits[b.Parent].Part)?.partPrefab.FindAttachNode("top");
+                    AttachNode cb = ap?.partPrefab.FindAttachNode("bottom");
+                    y[i] = y[b.Parent] + (pt != null ? pt.position.y : 0.5f) - (cb != null ? cb.position.y : -0.5f);
+                }
                 else
                 {
                     AttachNode pb = PartLoader.getPartInfoByName(bits[b.Parent].Part)?.partPrefab.FindAttachNode("bottom");
@@ -178,10 +184,10 @@ namespace PhilsReusabilitySuite
                 if (b.Parent >= 0)
                 {
                     if (b.Radial) p.AddValue("srfN", "srfAttach," + refs[b.Parent]);
-                    else p.AddValue("attN", "top," + refs[b.Parent]);
+                    else p.AddValue("attN", (b.Above ? "bottom," : "top,") + refs[b.Parent]);
                 }
                 for (int k = 0; k < bits.Count; k++)
-                    if (bits[k].Parent == i && !bits[k].Radial) p.AddValue("attN", "bottom," + refs[k]);
+                    if (bits[k].Parent == i && !bits[k].Radial) p.AddValue("attN", (bits[k].Above ? "top," : "bottom,") + refs[k]);
                 if (b.StrutTo >= 0)
                 {
                     // To the side of its target, straight down (local axes are the world's: the strut isn't rotated).
@@ -243,16 +249,17 @@ namespace PhilsReusabilitySuite
             Check(pipAp != null && (int)Member(program, "Mk") == 1, "its part " + pipPart + " at Mk " + Member(program, "Mk"));
             Suite.Touch();
 
-            // 3. The ship: a probe core, the battery, a storage unit, a decoupler and a tank, with a strut from the unit
-            // to the tank across the decoupler.
+            // 3. The ship, top to bottom: a tank, a decoupler, a probe core, the battery and a storage unit (it stands on
+            // that), with a strut from the unit up to the tank across the decoupler. Dropping the tank leaves the rest
+            // standing on the pad.
             var bits = new List<Bit>
             {
                 new Bit { Part = "probeCoreOcto.v2" },                                      // 0
-                new Bit { Part = pipPart, Program = programId, Parent = 0 },               // 1
-                new Bit { Part = Unit, Parent = 1 },                                        // 2
-                new Bit { Part = "Decoupler.2", Parent = 2, Decoupler = true },             // 3
-                new Bit { Part = "fuelTank", Parent = 3 },                                  // 4
-                new Bit { Part = "strutConnector", Parent = 2, Radial = true, X = 1.2f, StrutTo = 4 },  // 5
+                new Bit { Part = "Decoupler.2", Parent = 0, Above = true, Decoupler = true },  // 1
+                new Bit { Part = "fuelTank", Parent = 1, Above = true },                    // 2
+                new Bit { Part = pipPart, Program = programId, Parent = 0 },               // 3
+                new Bit { Part = Unit, Parent = 3 },                                        // 4
+                new Bit { Part = "strutConnector", Parent = 4, Radial = true, X = 1.2f, StrutTo = 2 },  // 5
             };
             foreach (Bit b in bits) if (PartLoader.getPartInfoByName(b.Part) == null) { Check(false, "part " + b.Part + " is installed"); yield break; }
             ConfigNode file = ShipCraft(bits);
@@ -303,19 +310,25 @@ namespace PhilsReusabilitySuite
             yield return new WaitForSeconds(3f);
             sc = PRSScenario.Instance;
             h = sc.HangarOf(shipId);
-            Check(h != null && sc.LaunchReady(h, out string lerr), "launching it from the hangar");
+            // Some wear from earlier flights, so refurbishing parts into the bin costs something (wear × refurbish share).
+            if (h != null) h.Wear = 0.4;
+            Check(h != null && sc.LaunchReady(h, out string lerr), "launching it from the hangar at 40% wear");
             yield return WaitFor(() => HighLogic.LoadedSceneIsFlight && FlightGlobals.ActiveVessel != null && FlightGlobals.ActiveVessel.loaded && !FlightGlobals.ActiveVessel.packed, 120, "it reached the pad");
             yield return new WaitForSeconds(5f);
             Vessel v = FlightGlobals.ActiveVessel;
             ModuleDecouplerBase dec = v.parts.Select(p => p.FindModuleImplementing<ModuleDecouplerBase>()).FirstOrDefault(m => m != null);
             Check(dec != null, "the decoupler is on the pad");
             dec?.Decouple();
-            yield return new WaitForSeconds(3f);
+            yield return null;
+            yield return null;
             v = FlightGlobals.ActiveVessel;
-            // The lower stage is left alone on the pad; it goes, so nothing else is recovered with it.
+            // The dropped tank goes at once, so it neither lands on the ship nor is recovered with it.
             foreach (Vessel other in FlightGlobals.Vessels.Where(x => x != v && x.parts.Any(p => p.partInfo.name == "fuelTank")).ToList()) other.Die();
+            yield return new WaitForSeconds(2f);
+            yield return WaitFor(() => v.srfSpeed < 0.05, 30, "the ship is standing still on the pad");
             yield return new WaitForSeconds(1f);
-            Check(v.parts.Count == 4 && v.parts.OfType<CompoundPart>().Count() == 1, "the upper stage is the probe, battery, storage unit and strut (" + v.parts.Count + " parts)");
+            Check(v.parts.Count == 5 && v.parts.OfType<CompoundPart>().Count() == 1 && !v.parts.Any(p => p.partInfo.name == "fuelTank"),
+                  "the ship left is the decoupler, probe, battery, storage unit and strut (" + v.parts.Count + " parts, " + v.situation + ")");
             ModuleInventoryPart flyingInv = v.parts.FirstOrDefault(p => p.partInfo.name == Unit)?.FindModuleImplementing<ModuleInventoryPart>();
             bool used = flyingInv != null && flyingInv.RemoveNPartsFromInventory(Kit, 3, false);
             Check(used && flyingInv.TotalAmountOfPartStored(Kit) == 3, "three kits used up in flight, three left (" + (flyingInv != null ? flyingInv.TotalAmountOfPartStored(Kit) : -1) + ")");
@@ -340,7 +353,7 @@ namespace PhilsReusabilitySuite
             Check(Math.Abs(charged - promptTransport) < 1, "recovery charged what the prompt said: " + F(charged) + " (prompt " + F(promptTransport) + ")");
             sc = PRSScenario.Instance;
             h = sc.HangarOf(shipId);
-            Check(h != null && h.PartCount == 3, "it's back in the hangar, 3 parts (" + h?.DisplayName + ", " + h?.PartCount + ")");
+            Check(h != null && h.PartCount == 4, "it's back in the hangar, 4 parts (" + h?.DisplayName + ", " + h?.PartCount + ")");
             if (h == null) yield break;
             Check(sc.Bin.Any(b => b.Key.StartsWith("strutConnector|", StringComparison.Ordinal)), "the strut is in the parts bin");
 
@@ -366,7 +379,7 @@ namespace PhilsReusabilitySuite
             // 9. Opened from the hangar in the VAB: the battery stays Mk 1, and it's exactly the hangar ship (R2:
             // "Launch as it is" stays).
             EditorAddon.OpenHangarShip(h);
-            yield return WaitFor(() => HighLogic.LoadedScene == GameScenes.EDITOR && EditorLogic.fetch != null && EditorAddon.Instance != null && EditorLogic.fetch.ship != null && EditorLogic.fetch.ship.parts.Count == 3, 90, "Open in the VAB went to the VAB with the ship");
+            yield return WaitFor(() => HighLogic.LoadedScene == GameScenes.EDITOR && EditorLogic.fetch != null && EditorAddon.Instance != null && EditorLogic.fetch.ship != null && EditorLogic.fetch.ship.parts.Count == 4, 90, "Open in the VAB went to the VAB with the ship");
             yield return new WaitForSeconds(3f);
             sc = PRSScenario.Instance;
             h = sc.HangarOf(shipId);
@@ -383,7 +396,7 @@ namespace PhilsReusabilitySuite
             EditorLogic.fetch.SwitchEditor();
             yield return new WaitForSeconds(1f);
             yield return WaitFor(() => EditorDriver.editorFacility == EditorFacility.SPH && EditorDriver.fetch != null && !EditorDriver.fetch.restartingEditor
-                                       && EditorLogic.fetch != null && EditorLogic.fetch.ship != null && EditorLogic.fetch.ship.parts.Count == 3, 90, "the ship moved to the SPH");
+                                       && EditorLogic.fetch != null && EditorLogic.fetch.ship != null && EditorLogic.fetch.ship.parts.Count == 4, 90, "the ship moved to the SPH");
             yield return new WaitForSeconds(3f);
             int addons = FindObjectsOfType<EditorAddon>().Length;
             Check(addons == 1, "one suite editor add-on after the switch (" + addons + ")");
