@@ -85,5 +85,9 @@ namespace PhilsReusabilitySuite
         /// <summary>Starts the in-game check that KSP's launch and part ids survive docking and saving (test harness only).</summary>
         [KSPEvent(guiActive = false, guiActiveEditor = false)]
         public void PRSSelfTestIds() { SelfTestIds.Begin(); }
+
+        /// <summary>Starts the in-game check of the 2026-11-16 code scan's fixes (test harness only).</summary>
+        [KSPEvent(guiActive = false, guiActiveEditor = false)]
+        public void PRSSelfTestScan() { SelfTestScan.Begin(); }
     }
 }
