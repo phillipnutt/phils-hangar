@@ -266,53 +266,93 @@ namespace PhilsReusabilitySuite
             Changed();
         }
 
-        void RecoverLaunch(ProtoVessel pv, List<ProtoPartSnapshot> parts)
+        /// <summary>
+        /// What recovering one launch's parts does: the ship they come home as (or none, and why), and which parts go to
+        /// the parts bin. One rule, worked out the same way for the recovery itself and for the
+        /// Recover prompt's price (code scan R3: the prompt said "free", then recovery charged for parts added in flight,
+        /// parts it couldn't place and struts whose other end was gone).
+        /// </summary>
+        sealed class LaunchReturn
         {
-            string vesselName = KSP.Localization.Localizer.Format(pv.vesselName);
-            LaunchRecord rec = parts.Select(ps => RecordOf(ps.launchID, ps.flightID)).FirstOrDefault(r => r != null);
+            public LaunchRecord Rec;
+            /// <summary>The ship this piece comes home as, or null: then all of it goes to the parts bin.</summary>
+            public Ship Ship;
+            public string BinReason;
+            /// <summary>Why the piece couldn't be rebuilt as a ship, if that's why it's going to the bin.</summary>
+            public List<string> Problems;
+            public PieceResult Piece;
+            /// <summary>The launch's parts that came home, by their place in the launch.</summary>
+            public readonly Dictionary<int, ProtoPartSnapshot> At = new Dictionary<int, ProtoPartSnapshot>();
+            /// <summary>Parts that came home but aren't the launch's (added in flight, or by EVA construction).</summary>
+            public readonly List<ProtoPartSnapshot> Strangers = new List<ProtoPartSnapshot>();
+            public double Wear;
+            /// <summary>The parts that go to the parts bin.</summary>
+            public readonly List<Node> ToBin = new List<Node>();
+        }
+
+        LaunchReturn ReturnOf(List<ProtoPartSnapshot> parts)
+        {
+            var lr = new LaunchReturn();
+            LaunchRecord rec = lr.Rec = parts.Select(ps => RecordOf(ps.launchID, ps.flightID)).FirstOrDefault(r => r != null);
             if (rec == null)
             {
-                LastBinReason = "it has no launch record";
-                double w = Core.Wear.After(0, FlightWear(parts));
-                foreach (ProtoPartSnapshot ps in parts) ToBin(PartNodeFrom(ps), w);
-                Log.Info("Recovered " + vesselName + ": no launch record, " + parts.Count + " parts to the parts bin");
-                return;
+                lr.BinReason = "it has no launch record";
+                lr.Wear = Core.Wear.After(0, FlightWear(parts));
+                lr.ToBin.AddRange(parts.Select(PartNodeFrom));
+                return lr;
             }
             // Each part by its place in the launch; parts added in flight aren't in it (parts bin). Parts a hard landing
             // broke off didn't come home (Restore puts them back).
-            var at = new Dictionary<int, ProtoPartSnapshot>();
-            var strangers = new List<ProtoPartSnapshot>();
             foreach (ProtoPartSnapshot ps in parts)
             {
                 int i = rec.IndexOf(ps.flightID);
-                if (i < 0 || at.ContainsKey(i)) { strangers.Add(ps); continue; }
-                if (!LeftBehindOnNextRecovery.Contains(ps.flightID)) at[i] = ps;
+                if (i < 0 || lr.At.ContainsKey(i)) { lr.Strangers.Add(ps); continue; }
+                if (!LeftBehindOnNextRecovery.Contains(ps.flightID)) lr.At[i] = ps;
             }
-            List<Node> launchParts = rec.Craft.Children("PART").ToList();
             // Its wear: the craft's wear when it launched, plus what this flight's hardest moments added.
-            double wear = Core.Wear.After(rec.Wear, FlightWear(at.Values));
-            Ship ship = ShipOfPiece(rec, at.Keys, out string binReason);
-            PieceResult r = ship != null ? Pieces.Build(rec.Craft, at.Keys.ToList()) : null;
-            if (ship != null)
+            lr.Wear = Core.Wear.After(rec.Wear, FlightWear(lr.At.Values));
+            lr.Ship = ShipOfPiece(rec, lr.At.Keys, out lr.BinReason);
+            if (lr.Ship != null)
             {
-                List<string> problems = r.Craft != null ? Pieces.Validate(r.Craft) : new List<string> { "nothing placed" };
-                if (r.Craft == null || r.Placed.Count == 0 || problems.Count > 0)
+                lr.Piece = Pieces.Build(rec.Craft, lr.At.Keys.ToList());
+                List<string> problems = lr.Piece.Craft != null ? Pieces.Validate(lr.Piece.Craft) : new List<string> { "nothing placed" };
+                if (lr.Piece.Craft == null || lr.Piece.Placed.Count == 0 || problems.Count > 0)
                 {
-                    ship = null;
-                    binReason = "it couldn't be rebuilt as a ship";
-                    if (problems.Count > 0) Log.Error("Rebuilt " + vesselName + " isn't valid (" + string.Join("; ", problems.Take(3).ToArray()) + "); its parts go to the parts bin");
+                    lr.Ship = null;
+                    lr.Piece = null;
+                    lr.BinReason = "it couldn't be rebuilt as a ship";
+                    lr.Problems = problems;
                 }
             }
-            if (ship == null)
+            // To the bin: all of it, or (for a ship) the parts that came home but can't be placed and struts whose other
+            // end is gone; and whatever was added in flight.
+            List<Node> launchParts = rec.Craft.Children("PART").ToList();
+            IEnumerable<int> binned = lr.Ship == null ? lr.At.Keys : lr.Piece.Unplaced.Concat(lr.Piece.Dropped);
+            foreach (int i in binned)
+                if (i >= 0 && i < launchParts.Count) lr.ToBin.Add(launchParts[i]);
+            lr.ToBin.AddRange(lr.Strangers.Select(PartNodeFrom));
+            return lr;
+        }
+
+        void RecoverLaunch(ProtoVessel pv, List<ProtoPartSnapshot> parts)
+        {
+            string vesselName = KSP.Localization.Localizer.Format(pv.vesselName);
+            LaunchReturn lr = ReturnOf(parts);
+            foreach (Node part in lr.ToBin) ToBin(part, lr.Wear);
+            if (lr.Ship == null)
             {
-                LastBinReason = binReason;
-                foreach (int i in at.Keys) ToBin(launchParts[i], wear);
-                foreach (ProtoPartSnapshot ps in strangers) ToBin(PartNodeFrom(ps), wear);
-                Log.Info("Recovered " + vesselName + ": " + binReason + ", so its " + (at.Count + strangers.Count) + " parts went to the parts bin");
+                LastBinReason = lr.BinReason;
+                if (lr.Problems != null && lr.Problems.Count > 0)
+                    Log.Error("Rebuilt " + vesselName + " isn't valid (" + string.Join("; ", lr.Problems.Take(3).ToArray()) + "); its parts go to the parts bin");
+                Log.Info("Recovered " + vesselName + ": " + lr.BinReason + ", so its " + lr.ToBin.Count + " parts went to the parts bin");
                 return;
             }
 
-            var h = new HangarShip { Ship = ship, UT = Now, Craft = Hardware.Plain(r.Craft), Wear = wear };
+            LaunchRecord rec = lr.Rec;
+            Ship ship = lr.Ship;
+            PieceResult r = lr.Piece;
+            Dictionary<int, ProtoPartSnapshot> at = lr.At;
+            var h = new HangarShip { Ship = ship, UT = Now, Craft = Hardware.Plain(r.Craft), Wear = lr.Wear };
             for (int k = 0; k < r.Placed.Count; k++)
             {
                 int i = r.Placed[k];
@@ -337,10 +377,7 @@ namespace PhilsReusabilitySuite
             ship.AddLog(ship.Flights + " · " + KSPUtil.PrintDateCompact(rec.UT, false) + " · " + rec.Name + " · " + landed
                         + (h.Missing > 0 ? ", missing " + Suite.Parts(h.Missing) : "") + " · wear " + Core.Wear.Percent(h.Wear));
             NextLandingNote = null;
-            // Parts that came home but can't be placed, and struts whose other end is gone, go to the parts bin.
-            foreach (int i in r.Unplaced.Concat(r.Dropped)) ToBin(launchParts[i], wear);
-            foreach (ProtoPartSnapshot ps in strangers) ToBin(PartNodeFrom(ps), wear);
-            int binned = r.Unplaced.Count + r.Dropped.Count + strangers.Count;
+            int binned = lr.ToBin.Count;
             Log.Info("Recovered " + vesselName + ": " + r.Placed.Count + " parts to the hangar as " + h.DisplayName
                      + (h.Missing > 0 ? ", " + h.Missing + " missing" : "") + ", wear " + Core.Wear.Percent(h.Wear)
                      + (binned > 0 ? ", " + binned + " to the parts bin" : ""));
@@ -408,8 +445,9 @@ namespace PhilsReusabilitySuite
         }
 
         /// <summary>
-        /// What recovering this ship would pay to refurbish parts into the parts bin: all of a launch's parts in it that
-        /// aren't its ship coming home (ShipOfPiece), else nothing. For the Recover prompt.
+        /// What recovering this ship would pay to refurbish parts into the parts bin, worked out as recovery does it
+        /// (ReturnOf): everything of a launch that isn't its ship coming home, and for a ship, the parts that came home
+        /// but can't be placed, struts whose other end is gone, and parts added in flight. For the Recover prompt.
         /// </summary>
         public double BinPriceIfRecovered(ProtoVessel pv)
         {
@@ -417,11 +455,8 @@ namespace PhilsReusabilitySuite
             // As recovery does it: each launch in it on its own (two docked ships).
             foreach (IGrouping<uint, ProtoPartSnapshot> g in pv.protoPartSnapshots.Where(PRSPart.Has).GroupBy(ps => ps.launchID))
             {
-                List<ProtoPartSnapshot> parts = g.ToList();
-                LaunchRecord rec = parts.Select(ps => RecordOf(ps.launchID, ps.flightID)).FirstOrDefault(r => r != null);
-                if (rec != null && ShipOfPiece(rec, parts.Select(ps => rec.IndexOf(ps.flightID)), out _) != null) continue;
-                double wear = Core.Wear.After(rec?.Wear ?? 0, FlightWear(parts));
-                total += parts.Sum(ps => KspCosts.Instance.Cost(PartNodeFrom(ps)).Dry) * Pricing.RefurbishShare(wear, S);
+                LaunchReturn lr = ReturnOf(g.ToList());
+                total += lr.ToBin.Sum(p => KspCosts.Instance.Cost(p).Dry) * Pricing.RefurbishShare(lr.Wear, S);
             }
             return total;
         }

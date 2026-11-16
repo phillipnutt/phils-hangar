@@ -6,6 +6,9 @@ From the code scan (2026-11-16):
 - **Moving a ship between the VAB and the SPH keeps it the ship you opened.** After the switch button, Build made a new
   ship, and the hangar ship you'd opened left the hangar with its number, flights and log; Phil's Iterative Parts also
   gave its flown parts the newest Mk for free. The Build panel showed the design's name without the ship's number.
+- **The Recover prompt shows what recovery charges.** It could say "free" and then charge for refurbishing parts into
+  the parts bin: parts added in flight, parts that can't be put back on the ship, and struts or fuel lines whose other
+  end didn't come home.
 
 From Phil's play on his new career:
 - **Scrolling over a suite window scrolls only the window.** At the Space Center the scroll wheel zoomed the camera
