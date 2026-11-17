@@ -122,14 +122,14 @@ namespace PhilsReusabilitySuite
 
         // ---- The ship ----
 
-        sealed class Bit { public string Part, Program; public int Parent = -1; public bool Radial, Above; public float X; public int StrutTo = -1; public bool Decoupler; }
+        internal sealed class Bit { public string Part, Program; public int Parent = -1; public bool Radial, Above; public float X; public int StrutTo = -1; public bool Decoupler; }
 
         /// <summary>The ship as a craft file (PIP fills in its part's build). A strut is a surface part with its target's
         /// craft id in PARTDATA, as KSP saves one.</summary>
-        static ConfigNode ShipCraft(List<Bit> bits)
+        internal static ConfigNode ShipCraft(List<Bit> bits, string name = ShipName)
         {
             var c = new ConfigNode("");
-            c.AddValue("ship", ShipName);
+            c.AddValue("ship", name);
             c.AddValue("version", "1.12.5");
             c.AddValue("description", "");
             c.AddValue("type", "VAB");

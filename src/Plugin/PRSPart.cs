@@ -89,5 +89,9 @@ namespace PhilsReusabilitySuite
         /// <summary>Starts the in-game check of the 2026-11-16 code scan's fixes (test harness only).</summary>
         [KSPEvent(guiActive = false, guiActiveEditor = false)]
         public void PRSSelfTestScan() { SelfTestScan.Begin(); }
+
+        /// <summary>Starts the in-game check that cargo comes home as it is, KIS cargo included (test harness only).</summary>
+        [KSPEvent(guiActive = false, guiActiveEditor = false)]
+        public void PRSSelfTestKis() { SelfTestKis.Begin(); }
     }
 }
