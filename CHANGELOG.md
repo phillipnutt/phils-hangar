@@ -10,8 +10,8 @@ From the code scan (2026-11-16):
   the parts bin: parts added in flight, parts that can't be put back on the ship, and struts or fuel lines whose other
   end didn't come home.
 - **Cargo used up in flight comes off the ship's price.** A ship that came home with less in its inventory was still
-  priced with the cargo it launched with, so it lost "Launch as it is", and Refurbish, Take apart, Sell and the parts
-  bin counted cargo that wasn't there any more.
+  priced with the cargo it launched with, so it lost "Launch as it is", and Refurbish, Restore, Take apart, Sell and
+  the parts bin counted cargo that wasn't there any more.
 - **Cargo in KIS containers comes home with the ship too.** A ship's Kerbal Inventory System containers came home
   holding what they launched with, priced with it: anything used up or taken out in flight was back, for free. Now
   whatever is packed in a KIS container comes home as it is, and its price counts only what's still there.

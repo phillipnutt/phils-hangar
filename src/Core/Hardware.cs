@@ -104,7 +104,10 @@ namespace PhilsReusabilitySuite.Core
         /// purpose), with each part the ship still has in its place as that hardware (its note, its own Mk) and every part
         /// it lost new. <paramref name="slots"/> gives each of the ship's parts its place in the blueprint.
         /// </summary>
-        public static Node Restore(Node blueprint, IList<int> slots, IList<Node> current, string craftId, out List<int> newSlots)
+        /// <param name="carryCargo">Puts a part's cargo as it is now (from, to) in place of the blueprint's, with what it's
+        /// worth; without it, only the cargo modules are carried.</param>
+        public static Node Restore(Node blueprint, IList<int> slots, IList<Node> current, string craftId, out List<int> newSlots,
+                                   Action<Node, Node> carryCargo = null)
         {
             var present = new Dictionary<int, int>();
             for (int k = 0; k < slots.Count && k < current.Count; k++)
@@ -122,7 +125,8 @@ namespace PhilsReusabilitySuite.Core
                     if (PartName(current[k]) != PartName(part)) TakePartName(craft, part, PartName(current[k]));
                     CarryHardware(current[k], part);
                     // Its cargo as it is now: Restore puts back lost parts, not what was used up.
-                    CarryModules(current[k], part, CargoModules);
+                    if (carryCargo != null) carryCargo(current[k], part);
+                    else CarryModules(current[k], part, CargoModules);
                 }
                 else
                 {

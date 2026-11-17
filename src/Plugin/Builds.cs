@@ -482,7 +482,7 @@ namespace PhilsReusabilitySuite
         {
             newParts = 0;
             if (h.Ship.Blueprint == null) return null;
-            Node craft = Hardware.Restore(h.Ship.Blueprint, h.Slots, h.Craft.Children("PART").ToList(), h.CraftId, out List<int> fresh);
+            Node craft = Hardware.Restore(h.Ship.Blueprint, h.Slots, h.Craft.Children("PART").ToList(), h.CraftId, out List<int> fresh, Cargo.Carry);
             newParts = fresh.Count;
             Pip.MakeCurrent(craft, p => Hardware.Of(p) == null);
             return craft;

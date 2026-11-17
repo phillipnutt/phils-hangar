@@ -20,6 +20,12 @@ namespace PhilsReusabilitySuite
             Swap(part, name => ps.modules.Where(m => m.moduleName == name && m.moduleValues != null).Select(m => AsModule(m, name)));
         }
 
+        /// <summary>Another node's cargo in place of this part's (Restore: the cargo the ship has now, not its blueprint's).</summary>
+        public static void Carry(Node from, Node to)
+        {
+            Swap(to, name => from.Children("MODULE").Where(m => m.Get("name") == name).Select(m => m.Clone()));
+        }
+
         /// <summary>Puts these cargo modules in place of the part's own (the same module, by name and order), and moves the
         /// part's module cost and mass by the difference in what they hold.</summary>
         static void Swap(Node part, Func<string, IEnumerable<Node>> modulesNamed)
