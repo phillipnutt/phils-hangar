@@ -12,6 +12,9 @@ From the code scan (2026-11-16):
 - **Cargo used up in flight comes off the ship's price.** A ship that came home with less in its inventory was still
   priced with the cargo it launched with, so it lost "Launch as it is", and Refurbish, Take apart, Sell and the parts
   bin counted cargo that wasn't there any more.
+- **Cargo in KIS containers comes home with the ship too.** A ship's Kerbal Inventory System containers came home
+  holding what they launched with, priced with it: anything used up or taken out in flight was back, for free. Now
+  whatever is packed in a KIS container comes home as it is, and its price counts only what's still there.
 
 From Phil's play on his new career:
 - **Scrolling over a suite window scrolls only the window.** At the Space Center the scroll wheel zoomed the camera

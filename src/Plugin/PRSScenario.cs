@@ -338,7 +338,7 @@ namespace PhilsReusabilitySuite
         static Node AsCameHome(Node launched, ProtoPartSnapshot ps)
         {
             Node n = launched.Clone();
-            if (ps != null) CarryInventory(ps, n);
+            if (ps != null) Cargo.CarryHome(ps, n);
             return n;
         }
 
@@ -365,8 +365,8 @@ namespace PhilsReusabilitySuite
             {
                 int i = r.Placed[k];
                 h.Slots.Add(rec.SlotOf(i));
-                // Its inventory as it is now (parts used up or taken out in flight are gone), not as it launched.
-                CarryInventory(at[i], h.Craft.Children("PART").ElementAt(k));
+                // Its cargo as it is now (what was used up or taken out in flight is gone), not as it launched.
+                Cargo.CarryHome(at[i], h.Craft.Children("PART").ElementAt(k));
                 // What each part still holds, so refuelling only tops it up.
                 var left = new Dictionary<string, double>();
                 foreach (ProtoPartResourceSnapshot res in at[i].resources)
@@ -389,58 +389,6 @@ namespace PhilsReusabilitySuite
             Log.Info("Recovered " + vesselName + ": " + r.Placed.Count + " parts to the hangar as " + h.DisplayName
                      + (h.Missing > 0 ? ", " + h.Missing + " missing" : "") + ", wear " + Core.Wear.Percent(h.Wear)
                      + (binned > 0 ? ", " + binned + " to the parts bin" : ""));
-        }
-
-        /// <summary>
-        /// A part's inventory module (KSP's cargo) as the part came home, in place of the one it launched with, and the
-        /// part's price and mass with it: KSP keeps what the cargo adds in the part's own module cost and mass, so cargo
-        /// used up or taken out in flight comes off those too (code scan R2).
-        /// </summary>
-        static void CarryInventory(ProtoPartSnapshot ps, Node part)
-        {
-            List<ProtoPartModuleSnapshot> now = ps.modules.Where(m => m.moduleName == "ModuleInventoryPart" && m.moduleValues != null).ToList();
-            int k = 0;
-            double cost = 0, mass = 0;
-            for (int j = 0; j < part.Nodes.Count && k < now.Count; j++)
-            {
-                if (part.Nodes[j].Name != "MODULE" || part.Nodes[j].Get("name") != "ModuleInventoryPart") continue;
-                Node m = KspNodes.FromKsp(now[k++].moduleValues);
-                m.Name = "MODULE";
-                if (m.Get("name") == null) m.Values.Insert(0, new KeyValuePair<string, string>("name", "ModuleInventoryPart"));
-                InventoryValue(part.Nodes[j], out double launchedCost, out double launchedMass);
-                InventoryValue(m, out double nowCost, out double nowMass);
-                cost += nowCost - launchedCost;
-                mass += nowMass - launchedMass;
-                part.Nodes[j] = m;
-            }
-            if (Math.Abs(cost) > 1e-4) part.Set("modCost", ((float)(LaunchRecord.Num(part.Get("modCost")) + cost)).ToString("R", CultureInfo.InvariantCulture));
-            if (Math.Abs(mass) > 1e-7) part.Set("modMass", ((float)(LaunchRecord.Num(part.Get("modMass")) + mass)).ToString("R", CultureInfo.InvariantCulture));
-        }
-
-        /// <summary>What a KSP inventory's stored parts add to the part holding it, as KSP works it out: each stored part's
-        /// price with what it holds, and its mass with what it holds, times how many are stacked in its slot.</summary>
-        internal static void InventoryValue(Node module, out double cost, out double mass)
-        {
-            cost = mass = 0;
-            Node stored = module?.Child("STOREDPARTS");
-            if (stored == null) return;
-            foreach (Node slot in stored.Children("STOREDPART"))
-            {
-                Node p = slot.Child("PART");
-                AvailablePart ap = p != null ? PartLoader.getPartInfoByName(p.Get("name") ?? slot.Get("partName")) : null;
-                if (ap == null) continue;
-                ShipConstruction.GetPartCostsAndMass(KspNodes.ToKsp(p, "PART"), ap, out float dry, out float fuel, out float dryMass, out float fuelMass);
-                double held = 0;
-                foreach (Node r in p.Children("RESOURCE"))
-                {
-                    PartResourceDefinition def = PartResourceLibrary.Instance?.GetDefinition(r.Get("name"));
-                    if (def != null) held += LaunchRecord.Num(r.Get("amount")) * def.density;
-                }
-                double own = p.Get("mass") != null ? LaunchRecord.Num(p.Get("mass")) : dryMass;
-                int count = Math.Max(1, (int)LaunchRecord.Num(slot.Get("quantity")));
-                cost += (dry + fuel) * count;
-                mass += (own + held) * count;
-            }
         }
 
         /// <summary>The wear this flight's hardest moments added, from any of these parts (Core.Wear).</summary>

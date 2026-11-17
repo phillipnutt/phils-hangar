@@ -122,7 +122,7 @@ namespace PhilsReusabilitySuite.Core
                     if (PartName(current[k]) != PartName(part)) TakePartName(craft, part, PartName(current[k]));
                     CarryHardware(current[k], part);
                     // Its cargo as it is now: Restore puts back lost parts, not what was used up.
-                    CarryModules(current[k], part, "ModuleInventoryPart");
+                    CarryModules(current[k], part, CargoModules);
                 }
                 else
                 {
@@ -139,6 +139,9 @@ namespace PhilsReusabilitySuite.Core
         /// chute) comes from the blueprint, as a restored ship should.
         /// </summary>
         public static readonly string[] HardwareModules = { "ModulePipPart", "ModulePipEngine" };
+
+        /// <summary>Modules that hold a part's cargo: KSP's own inventory, and Kerbal Inventory System containers.</summary>
+        public static readonly string[] CargoModules = { "ModuleInventoryPart", "ModuleKISInventory" };
 
         /// <summary>Puts the stored part's hardware modules in place of another node's (the same module, by name and order).</summary>
         public static void CarryHardware(Node from, Node to) => CarryModules(from, to, HardwareModules);
