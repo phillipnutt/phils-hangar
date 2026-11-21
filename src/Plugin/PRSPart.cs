@@ -93,5 +93,9 @@ namespace PhilsReusabilitySuite
         /// <summary>Starts the in-game check that cargo comes home as it is, KIS cargo included (test harness only).</summary>
         [KSPEvent(guiActive = false, guiActiveEditor = false)]
         public void PRSSelfTestKis() { SelfTestKis.Begin(); }
+
+        /// <summary>Starts the in-game check that a part keeps its setup's price through launch, hangar and bin (S33, test harness only).</summary>
+        [KSPEvent(guiActive = false, guiActiveEditor = false)]
+        public void PRSSelfTestS33() { SelfTestS33.Begin(); }
     }
 }
