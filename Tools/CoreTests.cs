@@ -170,7 +170,7 @@ static class CoreTests
         Check(oak.LeftOut == 1 && Near(oak.LeftOutPrice, 400 * 0.2 * 0.5, 0.01), "the part Oak 005 #4 leaves out goes to the bin, refurbished with the rest");
         Check(Near(q.FuelPrice, 100 * 0.8 + 910 * 0.8 + 50 * 0.8, 0.01), "fuel: new tanks filled, the flown stage topped up, the ready payload full, the bin battery filled from empty (" + q.FuelPrice + ")");
         Check(Near(q.Seconds, Pricing.BuildSeconds(q.BuildPrice, s), 1e-6), "build time comes from new parts plus refurbishing");
-        Check(q.Lines[0].Kind == OwnerKind.Hangar && q.Lines[2].Kind == OwnerKind.Bin && q.Lines[3].Kind == OwnerKind.New, "hangar ships first, then the bin, then new parts");
+        Check(q.Lines[0].Kind == OwnerKind.New && q.Lines[1].Kind == OwnerKind.Hangar && q.Lines[3].Kind == OwnerKind.Bin, "new parts first (what the build costs), then hangar ships, then the bin");
         Check(q.HangarShips.SetEquals(new[] { "oak", "comsat" }) && q.BinTaken.Count == 1 && q.BinTaken["battery|1000"] == 1, "the build knows which hangar ships it uses and what it takes from the bin");
         Check(q.Owners.Count == 2 && q.Owners[1] == "oak:0" && q.Owners[2] == "comsat:0", "the build knows which of its parts are which ship's hardware");
         Check(q.Lines.First(l => l.Kind == OwnerKind.Bin).Price == 0, "bin parts are already paid for");

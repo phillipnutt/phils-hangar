@@ -10,6 +10,10 @@ From Phil's play (2026-11-21):
   own setup nor the basic one (400). Each launch is now recorded at the prices the ship was built and launched with.
   Ships and bin parts that came home before this keep their old price; a ship puts it right the next time it's built
   or launched from the VAB.
+- **The Build panel shows all of itself, new parts first and by name.** Its list of what goes into the build is as tall
+  as it needs to be, as far as the screen allows, and its bottom-right corner drags it bigger. New parts are listed
+  first, by name, since they're what the build costs: the Stayputnik it was building was out of sight under the bin's
+  seven parts.
 
 From the code scan (2026-11-16):
 - **Moving a ship between the VAB and the SPH keeps it the ship you opened.** After the switch button, Build made a new

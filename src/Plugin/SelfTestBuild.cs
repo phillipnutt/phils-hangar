@@ -432,7 +432,7 @@ namespace PhilsReusabilitySuite
             Check(Near(qb.FuelPrice, q1.FuelPrice, 1), "bin parts were emptied as they went in: the fuel is bought again (" + Pricing.Funds(qb.FuelPrice) + ")");
             Check(!EditorLogic.fetch.ship.parts.Any(EditorAddon.IsHardware) && panel.MainShip == null, "a design loaded from a file is new parts (current Mk), and no hangar ship");
             QuoteLine binLine = qb.Lines.FirstOrDefault(l => l.Kind == OwnerKind.Bin);
-            var items = binLine != null ? BuildPanel.BinItems(binLine) : new System.Collections.Generic.List<string>();
+            var items = binLine != null ? BuildPanel.Items(binLine) : new System.Collections.Generic.List<string>();
             Check(items.Count > 0 && items.All(t => !t.Contains("wear") && !t.Contains("refurbish")), "the Build panel names the bin's parts, nothing about where they came from (" + string.Join("; ", items.ToArray()) + ")");
             yield return new WaitForSeconds(1f);
             Shot("build_panel_bin");

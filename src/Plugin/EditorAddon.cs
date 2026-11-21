@@ -367,6 +367,9 @@ namespace PhilsReusabilitySuite
 
         Rect rect = new Rect(0, 0, 600, 100);
         Vector2 scroll;
+        /// <summary>The panel's width, and its list's height once dragged by the corner (Phil, S33: "the window should be
+        /// resizable so I can see it all"). Until then the list is as tall as its parts, as far as the screen allows.</summary>
+        float width = 600, listHeight = -1;
 
         static Core.Settings S => Suite.Settings;
 
@@ -513,7 +516,7 @@ namespace PhilsReusabilitySuite
         {
             if (!Showing) return;
             GUI.skin = Look.Skin;
-            rect = GUILayout.Window(GetInstanceID(), rect, Draw, GUIContent.none, Look.Window, GUILayout.Width(600));
+            rect = GUILayout.Window(GetInstanceID(), rect, Draw, GUIContent.none, Look.Window, GUILayout.Width(width));
             // Keep clicks on the panel from reaching the editor underneath.
             if (rect.Contains(Event.current.mousePosition)) InputLockManager.SetControlLock(ControlTypes.EDITOR_LOCK, "PRSBuildPanel");
             else InputLockManager.RemoveControlLock("PRSBuildPanel");
@@ -565,7 +568,7 @@ namespace PhilsReusabilitySuite
 
             // What the build is made of: one build, broken down (Phil read these as cards to pick from).
             GUILayout.Label("WHAT GOES INTO IT", Look.Section);
-            scroll = GUILayout.BeginScrollView(scroll, GUILayout.MaxHeight(300), GUILayout.MinHeight(Mathf.Min(300, 48 * Quote.Lines.Count)));
+            scroll = GUILayout.BeginScrollView(scroll, GUILayout.Height(ListHeight()));
             foreach (QuoteLine line in Quote.Lines) DrawLine(line);
             GUILayout.EndScrollView();
             GUILayout.Label("Parts already built cost only their refurbish, which follows their ship's wear. Parts from the bin are already paid for. New parts cost their full price.", Look.Hint);
@@ -602,7 +605,48 @@ namespace PhilsReusabilitySuite
             GUILayout.Space(10);
             DrawFooter();
             GUILayout.EndVertical();
+            ResizeCorner();
             GUI.DragWindow(new Rect(0, 0, 10000, 50));
+        }
+
+        /// <summary>How tall the list is: what the player dragged it to, else tall enough for every part on it, as far as
+        /// the screen allows (the rest of the panel takes about 560 pixels).</summary>
+        float ListHeight()
+        {
+            if (listHeight > 0) return listHeight;
+            float want = 0;
+            foreach (QuoteLine line in Quote.Lines) want += 33 + 20 * LineRows(line);
+            return Mathf.Clamp(want, 60, Mathf.Max(120, Screen.height - 560 - Landings.Count * 44));
+        }
+
+        /// <summary>The lines under a line's title: its note, and the parts it names.</summary>
+        static int LineRows(QuoteLine line) =>
+            line.Kind == OwnerKind.New ? Items(line).Count + 1
+            : line.Kind == OwnerKind.Bin ? Items(line).Count
+            : 1 + (line.LeftOut > 0 ? 1 : 0);
+
+        /// <summary>The corner handle: dragging it makes the panel wider and its list taller (or narrower and shorter).</summary>
+        void ResizeCorner()
+        {
+            var corner = new Rect(rect.width - 24, rect.height - 24, 22, 22);
+            GUI.Label(corner, "◢", Look.Hint);
+            int id = GUIUtility.GetControlID(FocusType.Passive);
+            Event e = Event.current;
+            switch (e.GetTypeForControl(id))
+            {
+                case EventType.MouseDown:
+                    if (corner.Contains(e.mousePosition)) { GUIUtility.hotControl = id; e.Use(); }
+                    break;
+                case EventType.MouseDrag:
+                    if (GUIUtility.hotControl != id) break;
+                    width = Mathf.Clamp(width + e.delta.x, 520, Mathf.Max(520, Screen.width - rect.x - 10));
+                    listHeight = Mathf.Clamp((listHeight > 0 ? listHeight : ListHeight()) + e.delta.y, 60, Mathf.Max(60, Screen.height - 300));
+                    e.Use();
+                    break;
+                case EventType.MouseUp:
+                    if (GUIUtility.hotControl == id) { GUIUtility.hotControl = 0; e.Use(); }
+                    break;
+            }
         }
 
         void DrawReady()
@@ -619,13 +663,19 @@ namespace PhilsReusabilitySuite
             string parts = Suite.Parts(line.Parts);
             string title, note;
             List<string> items = null;
-            if (line.Kind == OwnerKind.New) { title = NewTitle(line); note = "built new"; }
+            if (line.Kind == OwnerKind.New)
+            {
+                // Which parts are new (Phil, S33: it didn't say the Stayputnik was the one it was building).
+                title = NewTitle(line);
+                note = "built new";
+                items = Items(line);
+            }
             else if (line.Kind == OwnerKind.Bin)
             {
                 // Which parts the bin gives (Phil didn't know it had used them).
                 title = parts + " from the parts bin, already paid for";
                 note = null;
-                items = BinItems(line);
+                items = Items(line);
             }
             else
             {
@@ -663,8 +713,8 @@ namespace PhilsReusabilitySuite
             return (design != null ? design + " · " : "") + Suite.Parts(line.Parts).Replace(" part", " new part");
         }
 
-        /// <summary>The bin line's parts: "2 × Mystery Goo Unit", "Augur I Mk. 3".</summary>
-        public static List<string> BinItems(QuoteLine line)
+        /// <summary>The parts on a bin or new-parts line: "2 × Mystery Goo Unit", "Augur I Mk. 3".</summary>
+        public static List<string> Items(QuoteLine line)
         {
             return line.Items.GroupBy(i => Pip.NameOf(i.Part)).Select(g => (g.Count() > 1 ? g.Count() + " × " : "") + g.Key).ToList();
         }

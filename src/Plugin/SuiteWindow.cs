@@ -300,7 +300,7 @@ namespace PhilsReusabilitySuite
             GUILayout.EndHorizontal();
             // Which parts the bin gives, and what a worn one costs to refurbish (Phil didn't know it had used them).
             QuoteLine bin = q.Lines.FirstOrDefault(l => l.Kind == OwnerKind.Bin);
-            if (bin != null) GUILayout.Label("From the parts bin: " + string.Join(", ", BuildPanel.BinItems(bin).ToArray()), Look.Meta);
+            if (bin != null) GUILayout.Label("From the parts bin: " + string.Join(", ", BuildPanel.Items(bin).ToArray()), Look.Meta);
             bool asking = QuestionFor("lib:" + item.Design.Id).Draw(q, item.Requote, 560);
             GUILayout.BeginHorizontal();
             GUILayout.Label(item.KindLabel + " · " + Suite.Parts(item.Parts) + (item.Blocked != null ? "\n<color=#ff8a7a>" + item.Blocked + "</color>" : ""), Look.Meta);
@@ -598,7 +598,7 @@ namespace PhilsReusabilitySuite
                     Line("Fuel", Pricing.Funds(r.Quote.FuelPrice));
                     Line("Total · build time", Pricing.Funds(r.Quote.Total) + " · " + Pricing.Duration(r.Quote.Seconds, S));
                     QuoteLine bin = r.Quote.Lines.FirstOrDefault(l => l.Kind == OwnerKind.Bin);
-                    if (bin != null) GUILayout.Label("From the parts bin: " + string.Join(", ", BuildPanel.BinItems(bin).ToArray()), Look.Meta);
+                    if (bin != null) GUILayout.Label("From the parts bin: " + string.Join(", ", BuildPanel.Items(bin).ToArray()), Look.Meta);
                     if (r.Blocked != null) GUILayout.Label(r.Blocked, Look.MetaBad);
                     // Its own old parts first (No keeps them), then any old bin part that would fill a gap.
                     restoreAsking = AskOwnOldParts(sc, h) || QuestionFor("restore:" + h.Id).Draw(r.Quote, () => restoreFor = null, 270);

@@ -201,7 +201,8 @@ namespace PhilsReusabilitySuite.Core
                 }
 
             // Owned parts first, then the bin, then the new parts.
-            q.Lines.AddRange(lines.Values.OrderBy(l => l.Kind == OwnerKind.Hangar ? 0 : l.Kind == OwnerKind.Bin ? 1 : 2));
+            // New parts first: they're what the build costs (Phil, S33: the one new part was out of sight under the bin's).
+            q.Lines.AddRange(lines.Values.OrderBy(l => l.Kind == OwnerKind.New ? 0 : l.Kind == OwnerKind.Hangar ? 1 : 2));
             q.Seconds = Pricing.BuildSeconds(q.BuildPrice, s);
             return q;
         }
