@@ -2,6 +2,15 @@
 
 ## Unreleased
 
+From Phil's play (2026-11-21):
+- **A part keeps its setup's price through launch, the hangar and the parts bin.** KSP saves its own copy of a launched
+  ship before the ship's parts start, so a price a mod works out once a part starts was missing from it: Kerbalism's
+  probe memory and experiments, a B9 fuel tank. Ships came home cheaper than they were built, and their parts went into
+  the parts bin that way, so a Stayputnik with its memory raised (1,600) came back from the bin matching neither its
+  own setup nor the basic one (400). Each launch is now recorded at the prices the ship was built and launched with.
+  Ships and bin parts that came home before this keep their old price; a ship puts it right the next time it's built
+  or launched from the VAB.
+
 From the code scan (2026-11-16):
 - **Moving a ship between the VAB and the SPH keeps it the ship you opened.** After the switch button, Build made a new
   ship, and the hangar ship you'd opened left the hangar with its number, flights and log; Phil's Iterative Parts also

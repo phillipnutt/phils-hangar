@@ -124,6 +124,7 @@ namespace PhilsReusabilitySuite
             Node craft = KspNodes.FromKsp(cfg);
             int[] at = PlacesIn(craft, parts);
             if (at == null) { Log.Warn("Launched-ship config of " + name + " doesn't match its " + parts.Count + " parts; launch not recorded"); return null; }
+            PricesAsLaunched(craft, name);
 
             var rec = new LaunchRecord { LaunchId = parts[0].launchID, UT = Now, Name = name, Craft = craft };
             rec.Parts.AddRange(Enumerable.Repeat(0u, parts.Count));
@@ -156,6 +157,35 @@ namespace PhilsReusabilitySuite
             Launches.Add(rec);
             Log.Info("Launch recorded (" + how + "): " + name + ", " + parts.Count + " parts, launch " + rec.LaunchId);
             return rec;
+        }
+
+        /// <summary>
+        /// Each part priced as the ship was when it launched (S33; S20). KSP saves its own copy of the launched ship again
+        /// right after loading it, before the parts start, so a price a mod works out once a part starts is missing from
+        /// that copy: Kerbalism's experiment setups, a B9 tank's fuel. A ship came home cheaper than it was built, and its
+        /// parts went into the parts bin cheaper, so they matched neither setup. The craft file KSP launched still has the
+        /// prices the VAB (or the hangar) gave it: each part takes its cost and mass from there.
+        /// </summary>
+        static void PricesAsLaunched(Node craft, string name)
+        {
+            string path = FlightDriver.newShipToLoadPath;
+            ConfigNode file = null;
+            try { if (!string.IsNullOrEmpty(path) && System.IO.File.Exists(path)) file = ConfigNode.Load(path); }
+            catch (Exception ex) { Log.Warn("Couldn't read the launched craft file (" + ex.Message + ")"); }
+            List<Node> mine = craft.Children("PART").ToList();
+            ConfigNode[] theirs = file?.GetNodes("PART");
+            if (theirs == null || theirs.Length != mine.Count) return;   // not this ship's file
+            var byRef = new Dictionary<string, ConfigNode>();
+            foreach (ConfigNode p in theirs) { string r = p.GetValue("part"); if (r != null) byRef[r] = p; }
+            int changed = 0;
+            foreach (Node p in mine)
+            {
+                if (!byRef.TryGetValue(p.Get("part") ?? "", out ConfigNode f)) continue;
+                string cost = f.GetValue("modCost"), mass = f.GetValue("modMass");
+                if (cost != null && cost != p.Get("modCost")) { p.Set("modCost", cost); changed++; }
+                if (mass != null) p.Set("modMass", mass);
+            }
+            if (changed > 0) Log.Info("Launch of " + name + ": " + Suite.Parts(changed) + " priced as launched, not as KSP saved them before the parts started");
         }
 
         /// <summary>
