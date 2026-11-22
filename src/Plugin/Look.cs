@@ -248,7 +248,7 @@ namespace PhilsReusabilitySuite
             });
         }
 
-        /// <summary>The toolbar icon: a hangar outline in PIP orange.</summary>
+        /// <summary>The old toolbar icon, a hangar outline in PIP orange: drawn only if Textures/toolbar.png is missing.</summary>
         public static Texture2D Icon()
         {
             return Make(38, 38, (x, y) =>

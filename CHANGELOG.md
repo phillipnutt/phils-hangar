@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- **A new toolbar icon, in the look Phil's mods share:** a small rocket-shaped P and an orange return arrow, in place of
+  the hangar.
+
 From Phil's play (2026-11-21):
 - **A part keeps its setup's price through launch, the hangar and the parts bin.** KSP saves its own copy of a launched
   ship before the ship's parts start, so a price a mod works out once a part starts was missing from it: Kerbalism's

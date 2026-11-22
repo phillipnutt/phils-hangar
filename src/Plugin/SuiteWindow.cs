@@ -62,11 +62,16 @@ namespace PhilsReusabilitySuite
             if (Instance == this) Instance = null;
         }
 
+        /// <summary>The toolbar icon, in the look Phil's mods share (GameData/PhilsReusabilitySuite/Textures/toolbar.png).</summary>
+        const string IconPath = "PhilsReusabilitySuite/Textures/toolbar";
+
         void AddButton()
         {
             if (button != null || ApplicationLauncher.Instance == null) return;
+            Texture icon = GameDatabase.Instance.GetTexture(IconPath, false);
+            if (icon == null) Log.Warn("The toolbar icon " + IconPath + ".png is missing; drawing the old one instead");
             button = ApplicationLauncher.Instance.AddModApplication(() => Show = true, () => Show = false, null, null, null, null,
-                ApplicationLauncher.AppScenes.SPACECENTER | ApplicationLauncher.AppScenes.VAB | ApplicationLauncher.AppScenes.SPH, Look.Icon());
+                ApplicationLauncher.AppScenes.SPACECENTER | ApplicationLauncher.AppScenes.VAB | ApplicationLauncher.AppScenes.SPH, icon ?? Look.Icon());
         }
 
         void OnGUI()
