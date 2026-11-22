@@ -396,7 +396,7 @@ namespace PhilsReusabilitySuite
         {
             error = null;
             PRSScenario sc = PRSScenario.Instance;
-            if (sc == null || item == null) { error = "The suite's save data isn't loaded."; return null; }
+            if (sc == null || item == null) { error = "Phil's Hangar hasn't loaded its save data."; return null; }
             if (item.Blocked != null) { error = item.Design.Name + " can't be built yet. " + item.Blocked; return null; }
             BuildJob job = sc.StartBuild(item.Craft, item.Design.Name, item.Facility, item.Quote, overtime, outsource, null, out error);
             if (job != null && !outsource) Suite.Message(item.Design.Name + " is being built: " + Pricing.Duration(job.SecondsLeft(S), S));

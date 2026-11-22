@@ -1,4 +1,4 @@
-# Phil's Reusability Suite
+# Phil's Hangar
 
 > **Written by an AI.** Every line of code in this mod was written by Claude (Anthropic's AI model).
 > Phil Nutt designs it and play-tests it. He isn't a programmer, and no human has reviewed the code.
@@ -40,15 +40,15 @@ it hasn't had much real play yet. Back up your saves. The design is in [DESIGN.m
   from the Space Center. Flown parts keep the Mk they were built at until you press **Update PIP parts** (in the
   parts bin or on a hangar ship). A build that could use an old-Mk bin part asks whether to update it first, or
   builds that part new.
-- **Build ahead from the Space Center.** "Build from Phil's Builds…" in the Build queue tab queues any filed
+- **Build ahead from the Space Center.** "Build from Phil's Design Bureau…" in the Build queue tab queues any filed
   craft without opening the VAB or SPH, and says why if it can't be built yet.
-- **Launchers are parts.** The ship is what you saved as the ship. Put a Phil's Builds launcher under it in the VAB
-  and that launcher isn't the ship: it has no name or log, it comes home to the parts bin, and the next launcher
+- **Launchers are parts.** The ship is what you saved as the ship. Put a launcher from Phil's Design Bureau under it
+  in the VAB and that launcher isn't the ship: it has no name or log, it comes home to the parts bin, and the next launcher
   you build takes its parts from there. Saved together with its booster, the booster is the ship's own, and Restore
   builds it again. A launcher on its own can't be built: put a ship on it.
-- **Built from designs.** Only ships built from a design filed in Phil's Builds come home to the hangar.
+- **Built from designs.** Only ships built from a design filed in Phil's Design Bureau come home to the hangar.
   Anything else goes to the parts bin, and the Build panel warns you first. Loading a design is always a new build:
-  open a built ship from the hangar, or from Phil's Builds' hangar list.
+  open a built ship from the hangar, or from the hangar list in Phil's Design Bureau.
 
 Every launch records the ship that went up in it and which parts are its own. The piece with its pod or probe core
 comes home as that ship: "Peleus III #2, 5 flights". A ship stays itself however it is rebuilt (open it in the VAB,
@@ -59,12 +59,12 @@ change it, even save it as another design), and keeps its own blueprint for Rest
 - KSP 1.12.x
 - ModuleManager
 - Harmony 2 (000_Harmony)
-- [Phil's Builds](https://github.com/phillipnutt/phils-builds) (required: it's where designs are filed). Phil's Builds works fine without
-  this mod. Its newest version also gives the suite's windows their pictures.
-- [Phil's Iterative Parts](https://github.com/phillipnutt/phils-iterative-parts) is optional. With it, the suite keeps
+- [Phil's Design Bureau](https://github.com/phillipnutt/phils-builds) (required: it's where designs are filed). It works fine without
+  this mod. Its newest version also gives this mod's windows their pictures.
+- [Phil's Iterative Parts](https://github.com/phillipnutt/phils-iterative-parts) is optional. With it, this mod keeps
   track of each part's Mk.
 
-StageRecovery and ScrapYard do the same jobs, so remove them. While StageRecovery is installed, the suite
+StageRecovery and ScrapYard do the same jobs, so remove them. While StageRecovery is installed, this mod
 leaves stage recovery to it.
 
 It's made for career games. In sandbox and science games there's no money: builds just take time.
@@ -72,9 +72,9 @@ It's made for career games. In sandbox and science games there's no money: build
 ## Install
 
 Copy `GameData/PhilsReusabilitySuite` from the release zip into your KSP `GameData` folder, alongside
-ModuleManager, Harmony and Phil's Builds. It works in a new game or an existing one. Ships launched before
-it was installed have no launch record, so when they come home their parts go to the parts bin rather
-than the hangar.
+ModuleManager, Harmony and Phil's Design Bureau. The folder keeps the mod's old name, Phil's Reusability Suite.
+It works in a new game or an existing one. Ships launched before it was installed have no launch record, so when
+they come home their parts go to the parts bin rather than the hangar.
 
 ## Settings
 

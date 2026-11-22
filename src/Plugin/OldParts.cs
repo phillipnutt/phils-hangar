@@ -49,7 +49,7 @@ namespace PhilsReusabilitySuite
                 if (GUILayout.Button("Update and use · " + fee, Look.Go, GUILayout.Height(30), GUILayout.ExpandWidth(false)))
                 {
                     PRSScenario sc = PRSScenario.Instance;
-                    string err = "The suite's save data isn't loaded.";
+                    string err = "Phil's Hangar hasn't loaded its save data.";
                     if (sc != null && sc.UpdatePip(sc.BinKindsOf(q.OldBin), out err)) { error = null; requote(); }
                     else error = err;
                     GUIUtility.ExitGUI();

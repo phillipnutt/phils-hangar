@@ -254,7 +254,7 @@ namespace PhilsReusabilitySuite
             if (own.Count == 0) { whyNot = "it's launcher parts, not " + ship.DisplayName; return null; }
             if (!RecoveryValue.HasCommand(own.Select(i => Hardware.PartName(launched[i])))) { whyNot = "it has none of " + ship.DisplayName + "'s pods or probe cores"; return null; }
             // Phil's rule: a ship that was never filed as a design in Phil's Builds is just parts.
-            if (S.RequireDesign && !own.Any(i => !string.IsNullOrEmpty(Hardware.Module(launched[i])?.Get("design")))) { whyNot = "it wasn't built from a design filed in Phil's Builds"; return null; }
+            if (S.RequireDesign && !own.Any(i => !string.IsNullOrEmpty(Hardware.Module(launched[i])?.Get("design")))) { whyNot = "it wasn't built from a design filed in Phil's Design Bureau"; return null; }
             return ship;
         }
 

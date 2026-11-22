@@ -22,10 +22,10 @@ namespace PhilsReusabilitySuite
             if (AssemblyLoader.loadedAssemblies.Any(a => a.name == "ScrapYard"))
             {
                 Log.Warn("ScrapYard is installed alongside the suite: both act on the same recoveries, launches and funds");
-                Suite.Message("ScrapYard is installed: it handles the same recoveries and launches as Phil's Reusability Suite. Remove one of them.", 12f);
+                Suite.Message("ScrapYard is installed: it handles the same recoveries and launches as Phil's Hangar. Remove one of them.", 12f);
             }
             if (StageReturns.StageRecoveryInstalled)
-                Suite.Message("StageRecovery is installed, so Phil's Reusability Suite leaves stage recovery to it. Remove StageRecovery to have stages come home to the hangar.", 12f);
+                Suite.Message("StageRecovery is installed, so Phil's Hangar leaves stage recovery to it. Remove StageRecovery to have stages come home to the hangar.", 12f);
         }
     }
 
@@ -99,7 +99,7 @@ namespace PhilsReusabilitySuite
             {
                 GUILayout.Label("Phil's", Look.TitleMuted, GUILayout.ExpandWidth(false), GUILayout.Height(50));
                 GUILayout.Space(6);
-                GUILayout.Label("Reusability Suite", Look.Title, GUILayout.ExpandWidth(false), GUILayout.Height(50));
+                GUILayout.Label("Hangar", Look.Title, GUILayout.ExpandWidth(false), GUILayout.Height(50));
             }
             else GUILayout.Label(title, Look.TitleMuted, GUILayout.ExpandWidth(false), GUILayout.Height(50));
             GUILayout.Space(14);
@@ -124,7 +124,7 @@ namespace PhilsReusabilitySuite
                 TabButton(1, "Hangar", sc.Hangar.Count);
                 TabButton(2, "Parts bin", sc.Bin.Sum(k => k.Count));
             });
-            if (sc == null) { GUILayout.Label("The suite's save data isn't loaded in this scene.", Look.Empty, GUILayout.ExpandHeight(true)); GUILayout.EndVertical(); GUI.DragWindow(); return; }
+            if (sc == null) { GUILayout.Label("Phil's Hangar hasn't loaded its save data in this scene.", Look.Empty, GUILayout.ExpandHeight(true)); GUILayout.EndVertical(); GUI.DragWindow(); return; }
             if (error != null) { GUILayout.Space(6); GUILayout.BeginHorizontal(); GUILayout.Space(16); GUILayout.Label(error, Look.MetaBad); GUILayout.EndHorizontal(); }
             GUILayout.BeginHorizontal(GUILayout.ExpandHeight(true));
             if (crewShip != null) CrewStep(sc);
@@ -180,7 +180,7 @@ namespace PhilsReusabilitySuite
                 }
                 Indent(() =>
                 {
-                    if (GUILayout.Button("Build from Phil's Builds…", Look.Ghost, GUILayout.Height(32), GUILayout.ExpandWidth(false))) { OpenLibrary(); GUIUtility.ExitGUI(); }
+                    if (GUILayout.Button("Build from Phil's Design Bureau…", Look.Ghost, GUILayout.Height(32), GUILayout.ExpandWidth(false))) { OpenLibrary(); GUIUtility.ExitGUI(); }
                     GUILayout.Label("Queue a filed launcher or craft without opening the VAB or SPH.", Look.Hint);
                 });
             }
@@ -263,7 +263,7 @@ namespace PhilsReusabilitySuite
             Indent(() =>
             {
                 GUILayout.BeginHorizontal();
-                GUILayout.Label("<b>Build from Phil's Builds</b>", Look.H2Muted);
+                GUILayout.Label("<b>Build from Phil's Design Bureau</b>", Look.H2Muted);
                 GUILayout.FlexibleSpace();
                 if (GUILayout.Button("Back to the queue", Look.Ghost, GUILayout.Height(28), GUILayout.ExpandWidth(false))) { picking = false; library = null; GUIUtility.ExitGUI(); }
                 GUILayout.EndHorizontal();
@@ -277,7 +277,7 @@ namespace PhilsReusabilitySuite
                 GUILayout.EndHorizontal();
                 GUILayout.Space(6);
             });
-            if (library.Count == 0) Indent(() => GUILayout.Label("Nothing is filed yet. File craft with Phil's Builds' Save panel in the VAB or SPH.", Look.Hint));
+            if (library.Count == 0) Indent(() => GUILayout.Label("Nothing is filed yet. File craft with the Save panel of Phil's Design Bureau, in the VAB or SPH.", Look.Hint));
             foreach (BuildsLink.LibraryBuild item in library.ToList()) Indent(() => LibraryCard(item));
         }
 

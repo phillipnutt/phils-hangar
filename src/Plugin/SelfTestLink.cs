@@ -566,7 +566,7 @@ namespace PhilsReusabilitySuite
             // A hard landing (6 to 12 m/s) can break outer parts off: those are lost, the rest go to the bin.
             int inBin = sc.Bin.Sum(k => k.Count) - dropBinBefore;
             Check(outcome != null && (lostIt || (inBin > 0 && inBin <= dropParts)), "it came home to the parts bin (it was never filed): " + inBin + " parts in the bin, " + (dropParts - inBin) + " lost in the landing");
-            Check(outcome == null || lostIt || outcome.Contains("filed in Phil's Builds"), "the message says why it went to the bin");
+            Check(outcome == null || lostIt || outcome.Contains("filed in Phil's Design Bureau"), "the message says why it went to the bin");
 
             // 7c. Restore from the hangar: the flown Hopper gets its chute back from its own blueprint (new, or one from the bin)
             // and is ready again as itself, with its own flown parts.

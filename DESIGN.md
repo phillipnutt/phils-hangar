@@ -1,8 +1,12 @@
-# Phil's Reusability Suite: design
+# Phil's Hangar: design
 
 > Written by Claude (an AI). Phil designs and play-tests; he isn't a programmer.
 > Design agreed with Phil on 2026-11-07, mockup included. Nothing is built yet: code starts only when
 > Phil says go.
+>
+> Renamed on 2026-11-22: Phil's Reusability Suite is now Phil's Hangar, and Phil's Builds is now Phil's
+> Design Bureau. Only the names players see changed (the GameData folder, saves and code keep the old
+> ones), and the notes below keep the names they were written with.
 
 A KSP 1.12 career mod that makes ships things you build, fly, bring home and fly again. It adds a
 build queue, a hangar for recovered ships, stage recovery into the hangar, part reuse, and a flown

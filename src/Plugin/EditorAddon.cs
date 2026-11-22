@@ -457,7 +457,7 @@ namespace PhilsReusabilitySuite
         public bool Confirm()
         {
             PRSScenario sc = PRSScenario.Instance;
-            if (sc == null || Quote == null) { Error = "The suite's save data isn't loaded."; return false; }
+            if (sc == null || Quote == null) { Error = "Phil's Hangar hasn't loaded its save data."; return false; }
             if (Quote.PartCount == 0) { Error = "There's nothing to build."; return false; }
             if (OnlyLauncher) { Error = PRSScenario.OnlyLauncherText; return false; }
             if (Quote.OldBin.Count > 0) { Error = "Answer the question about the parts bin's older parts first."; return false; }
@@ -552,17 +552,17 @@ namespace PhilsReusabilitySuite
             if (Unfiled)
             {
                 GUILayout.BeginHorizontal(Look.Notice);
-                GUILayout.Label("<color=#ffcf5a>Not filed in Phil's Builds.</color> A ship that isn't from a filed design goes to the parts bin when it comes home.", Look.Meta, GUILayout.Width(430));
+                GUILayout.Label("<color=#ffcf5a>Not filed in Phil's Design Bureau.</color> A ship that isn't from a filed design goes to the parts bin when it comes home.", Look.Meta, GUILayout.Width(430));
                 GUILayout.FlexibleSpace();
                 if (GUILayout.Button("File it", Look.Ghost, GUILayout.Height(30), GUILayout.Width(80)))
                 {
                     try { PhilsBuilds.BuildsApi.OpenSave(); Showing = false; }
-                    catch (System.Exception ex) { Error = "Couldn't open Phil's Builds' Save panel: " + ex.Message; }
+                    catch (System.Exception ex) { Error = "Couldn't open the Save panel of Phil's Design Bureau: " + ex.Message; }
                 }
                 GUILayout.EndHorizontal();
                 GUILayout.Space(6);
             }
-            if (Quote == null) { GUILayout.Label("The suite's save data isn't loaded.", Look.MetaBad); EndBody(); return; }
+            if (Quote == null) { GUILayout.Label("Phil's Hangar hasn't loaded its save data.", Look.MetaBad); EndBody(); return; }
             if (OnlyLauncher) { GUILayout.Label(PRSScenario.OnlyLauncherText, Look.Notice); EndBody(); return; }
             asking = OldQ.Draw(Quote, Refresh, 540);
 

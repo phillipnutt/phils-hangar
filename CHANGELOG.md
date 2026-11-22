@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- **The mod is now called Phil's Hangar** (it was Phil's Reusability Suite), and Phil's Builds is now Phil's Design
+  Bureau. Only the names you see change: the GameData folder, saves and settings stay as they were, so a game in
+  progress carries on as it is.
 - **A new toolbar icon, in the look Phil's mods share:** a small rocket-shaped P and an orange return arrow, in place of
   the hangar.
 
