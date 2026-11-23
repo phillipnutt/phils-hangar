@@ -5,8 +5,8 @@
 - **The mod is now called Phil's Hangar** (it was Phil's Reusability Suite), and Phil's Builds is now Phil's Design
   Bureau. Only the names you see change: the GameData folder, saves and settings stay as they were, so a game in
   progress carries on as it is.
-- **A new toolbar icon, in the look Phil's mods share:** a small rocket-shaped P and an orange return arrow, in place of
-  the hangar.
+- **A new toolbar icon, in the look Phil's mods share:** a small rocket-shaped P and an orange hangar with an arched roof,
+  in place of the old hangar outline.
 
 From Phil's play (2026-11-21):
 - **A part keeps its setup's price through launch, the hangar and the parts bin.** KSP saves its own copy of a launched
