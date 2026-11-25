@@ -7,7 +7,7 @@ namespace PhilsReusabilitySuite.Core
     /// <summary>Every number the suite uses, read from PRS_SETTINGS in GameData (Settings.cfg).</summary>
     public sealed class Settings
     {
-        /// <summary>Build days = (work in funds ÷ BuildBase) ^ BuildExponent. Work is new parts plus refurbishing, without fuel.</summary>
+        /// <summary>Build days = (work in funds ÷ BuildBase) ^ BuildExponent. Work is new parts, refurbishing and assembly, without fuel.</summary>
         public double BuildBase = 20000;
         public double BuildExponent = 0.8;
         /// <summary>Seconds in a day on the game clock (Kerbin: 6 hours). Set from KSP at runtime.</summary>
@@ -21,11 +21,14 @@ namespace PhilsReusabilitySuite.Core
         /// <summary>Refurbishing a flown craft costs its parts' price times its wear times this (100% worn: half the price of new).</summary>
         public double RefurbishShare = 0.5;
         /// <summary>Wear a flight adds (see Core.Wear): up to WearSpeed for the top surface speed, reached at WearSpeedFull m/s...</summary>
-        public double WearSpeed = 0.10, WearSpeedFull = 2500;
+        public double WearSpeed = 0.15, WearSpeedFull = 2500;
         /// <summary>...up to WearHeat for the hottest part, from WearHeatFrom of its own limit rising to all of it...</summary>
-        public double WearHeat = 0.30, WearHeatFrom = 0.5;
+        public double WearHeat = 0.25, WearHeatFrom = 0.5;
         /// <summary>...and up to WearG for the highest G, from WearGFrom rising to WearGFull.</summary>
-        public double WearG = 0.20, WearGFrom = 3, WearGFull = 10;
+        public double WearG = 0.05, WearGFrom = 3, WearGFull = 10;
+        /// <summary>Putting a part on a ship costs this share of its price (without fuel): new parts and parts from the bin.
+        /// Parts already on a hangar ship are already assembled. Part of the build price, so it takes build time too.</summary>
+        public double AssemblyShare = 0.05;
         /// <summary>Selling for scrap returns this share of the part price.</summary>
         public double ScrapValue = 0.5;
         /// <summary>Updating a Phil's Iterative Parts part to its program's current Mk costs this share of its price per Mk gained.</summary>
@@ -55,6 +58,7 @@ namespace PhilsReusabilitySuite.Core
             s.WearGFrom = D(n, "wearGFrom", s.WearGFrom, true);
             s.WearGFull = D(n, "wearGFull", s.WearGFull);
             if (s.WearGFull <= s.WearGFrom) { s.WearGFrom = 3; s.WearGFull = 10; }
+            s.AssemblyShare = D(n, "assemblyShare", s.AssemblyShare, true);
             s.ScrapValue = D(n, "scrapValue", s.ScrapValue, true);
             s.PipUpdatePerMk = D(n, "pipUpdatePerMk", s.PipUpdatePerMk, true);
             s.LinesPerLevel = (int)Math.Max(1, D(n, "linesPerLevel", s.LinesPerLevel));

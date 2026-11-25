@@ -467,6 +467,7 @@ namespace PhilsReusabilitySuite
                 var d = new CopyDetail { Eyebrow = kind + " · " + design.Family + " family", Title = design.Name + ", new", TotalLabel = "Total · build time", Total = Price(q) };
                 d.Lines.Add(new CopyLine("New parts", Pricing.Funds(q.NewPrice)));
                 if (q.BinParts > 0) d.Lines.Add(new CopyLine(Suite.Parts(q.BinParts) + " from the parts bin, already paid for", Pricing.Funds(0), true));
+                if (q.AssemblyParts > 0) d.Lines.Add(new CopyLine("Assembly · " + Suite.Parts(q.AssemblyParts), Pricing.Funds(q.AssemblyPrice)));
                 d.Lines.Add(new CopyLine("Fuel", Pricing.Funds(q.FuelPrice)));
                 d.Hint = "A brand-new " + design.Name + ".";
                 return d;
@@ -490,6 +491,7 @@ namespace PhilsReusabilitySuite
             if (behind > 0) detail.Chips.Add(new CopyChip((behind == 1 ? "1 PIP part" : behind + " PIP parts") + " behind", ChipTone.Warn));
             if (cq.RefurbishPrice >= 0.5) detail.Lines.Add(new CopyLine("Refurbish to 0% wear", Pricing.Funds(cq.RefurbishPrice), true));
             if (newCount > 0) detail.Lines.Add(new CopyLine(Suite.Parts(newCount).Replace(" part", " new part") + " for what it lost", Pricing.Funds(cq.NewPrice)));
+            if (cq.AssemblyParts > 0) detail.Lines.Add(new CopyLine("Assembly · " + Suite.Parts(cq.AssemblyParts), Pricing.Funds(cq.AssemblyPrice)));
             detail.Lines.Add(new CopyLine(h.Ready ? "Fuel (full)" : "Fuel top-up", Pricing.Funds(cq.FuelPrice)));
             detail.Log.AddRange(sc.LogOf(h).Take(6));
             // Phil: "load", not "pick up". Phil's Builds' own button brings the whole ship (what it lost new); "Load as

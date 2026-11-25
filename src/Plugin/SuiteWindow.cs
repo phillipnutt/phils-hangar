@@ -600,6 +600,7 @@ namespace PhilsReusabilitySuite
                     GUILayout.Label("RESTORE · WHAT IT LOST", Look.Section);
                     Line(r.NewParts + (r.NewParts == 1 ? " new part" : " new parts") + (r.Quote.BinParts > 0 ? " (" + r.Quote.BinParts + " from the bin)" : ""), Pricing.Funds(r.Quote.NewPrice));
                     Line("Refurbish the rest", Pricing.Funds(r.Quote.RefurbishPrice));
+                    if (r.Quote.AssemblyParts > 0) Line("Assembly · " + Suite.Parts(r.Quote.AssemblyParts), Pricing.Funds(r.Quote.AssemblyPrice));
                     Line("Fuel", Pricing.Funds(r.Quote.FuelPrice));
                     Line("Total · build time", Pricing.Funds(r.Quote.Total) + " · " + Pricing.Duration(r.Quote.Seconds, S));
                     QuoteLine bin = r.Quote.Lines.FirstOrDefault(l => l.Kind == OwnerKind.Bin);

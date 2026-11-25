@@ -571,13 +571,15 @@ namespace PhilsReusabilitySuite
             scroll = GUILayout.BeginScrollView(scroll, GUILayout.Height(ListHeight()));
             foreach (QuoteLine line in Quote.Lines) DrawLine(line);
             GUILayout.EndScrollView();
-            GUILayout.Label("Parts already built cost only their refurbish, which follows their ship's wear. Parts from the bin are already paid for. New parts cost their full price.", Look.Hint);
+            GUILayout.Label("Parts already built cost only their refurbish, which follows their ship's wear. Parts from the bin are already paid for. New parts cost their full price."
+                + (S.AssemblyShare > 0 ? " Putting a part on the ship costs " + (S.AssemblyShare * 100).ToString("0.#", System.Globalization.CultureInfo.InvariantCulture) + "% of its price for assembly; parts already on a hangar ship are already assembled." : ""), Look.Hint);
             DrawLandings();
 
             GUILayout.Space(8);
             GUILayout.BeginVertical(Look.Notice);
             Row("New parts", Quote.NewPrice, Look.RowVal);
             Row("Refurbishing", Quote.RefurbishPrice, Look.RowVal);
+            if (Quote.AssemblyParts > 0) Row("Assembly · " + Suite.Parts(Quote.AssemblyParts), Quote.AssemblyPrice, Look.RowVal);
             Row("Fuel", Quote.FuelPrice, Look.RowVal);
             if (Chosen != Pace.Normal) Row(Chosen == Pace.Overtime ? "Overtime" : "Outsourcing", Extra(Chosen), Look.RowValAmber, "+");
             if (Editing != null) Row("Already paid", -Editing.Paid, Look.RowValGood);
@@ -610,13 +612,13 @@ namespace PhilsReusabilitySuite
         }
 
         /// <summary>How tall the list is: what the player dragged it to, else tall enough for every part on it, as far as
-        /// the screen allows (the rest of the panel takes about 560 pixels).</summary>
+        /// the screen allows (the rest of the panel takes about 600 pixels).</summary>
         float ListHeight()
         {
             if (listHeight > 0) return listHeight;
             float want = 0;
             foreach (QuoteLine line in Quote.Lines) want += 33 + 20 * LineRows(line);
-            return Mathf.Clamp(want, 60, Mathf.Max(120, Screen.height - 560 - Landings.Count * 44));
+            return Mathf.Clamp(want, 60, Mathf.Max(120, Screen.height - 600 - Landings.Count * 44));
         }
 
         /// <summary>The lines under a line's title: its note, and the parts it names.</summary>

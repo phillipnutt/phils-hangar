@@ -138,13 +138,21 @@ booster under a newly built payload.
      - **No failures or other penalties** from wear, and it stays out of PIP ("way too messy").
      - **What a flight adds:** while a craft is loaded, each part keeps the flight's peaks: surface speed, the
        hottest part as a share of its own limit (the worse of skin and core), and G (KSP's smoothed
-       `vessel.geeForce`). At recovery: speed 10% × peak ÷ 2,500 m/s (at most 10%); heat 0 below half the
-       limit, rising to 30% at the limit; G 0 below 3 G, rising to 20% at 10 G. Roughly: a pad hop about 1%, a
-       short suborbital hop 2 to 5%, orbit and a normal re-entry 20 to 25%, a near-melting steep re-entry 50%.
+       `vessel.geeForce`). At recovery: speed 15% × peak ÷ 2,500 m/s (at most 15%); heat 0 below half the
+       limit, rising to 25% at the limit; G 0 below 3 G, rising to 5% at 10 G. (Retuned by Phil on 2026-11-24,
+       "my planes are getting nuked": it was speed 10%, heat 30%, G 20%. Wear already on a ship stays.) Roughly:
+       a pad hop about 1%, a short suborbital hop 2 to 5%, orbit and a normal re-entry about 25%, a near-melting
+       steep re-entry 40%.
      - **Stages that land unloaded** (stage recovery) have no readings for the fall: they bring home the peaks
        they had when they left physics range, which is about their speed at separation.
      - **Refurbish price = the craft's part price × wear × ½** (20% wear is about the old 10% refit; 100% is
        half the price of new). Its time is the build-time formula, as for any build.
+     - **Assembly (Phil, 2026-11-24):** putting a part on a ship costs `assemblyShare` (5%) of its price, fuel
+       not counted: new parts and parts from the parts bin. Parts already on a hangar ship are already assembled,
+       so a refurbish pays none, a refit pays only for the parts it adds (or for what was added to a part), and
+       Restore pays it on the parts the ship lost. Taking a ship apart pays none. It's part of the build price, so
+       it takes build time (a ship built only from bin parts isn't instant) and counts toward overtime and
+       outsourcing. The Build panel shows it on a line of its own.
      - **Any build refurbishes the flown hardware in it:** Restore (the surviving parts too, so one new fin
        doesn't "reset" a worn craft and new parts don't count as worn), a flown booster under a new payload, a
        hangar ship built on in the VAB. The built craft leaves at 0%.

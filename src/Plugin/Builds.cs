@@ -368,6 +368,7 @@ namespace PhilsReusabilitySuite
             job.NewPrice = q.NewPrice;
             job.RefurbishPrice = q.RefurbishPrice;
             job.FuelPrice = q.FuelPrice;
+            job.AssemblyPrice = q.AssemblyPrice;
             job.Paid = q.Total;
             // The ship it keeps must be in it (its hardware); otherwise it's a new ship.
             job.ShipId = keepShipId != null && q.HangarShips.Contains(keepShipId) ? keepShipId : null;

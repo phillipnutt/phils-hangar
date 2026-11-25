@@ -37,6 +37,7 @@ static class CoreTests
         QuoteChecks();
         RoundTwoChecks();
         RoundFourChecks();
+        AssemblyChecks();
         int craftCount = 0, pieces = 0;
         foreach (string f in files.OrderBy(x => x))
         {
@@ -83,9 +84,10 @@ static class CoreTests
         Check(Near(Pricing.RefurbishShare(0.2, s), 0.10, 1e-9), "20% wear: refurbishing costs 10% of the price (Phil's old refit)");
         Check(Near(Pricing.RefurbishShare(1, s), 0.5, 1e-9) && Near(Pricing.RefurbishShare(1.5, s), 0.5, 1e-9), "100% wear: half the price of new, never more");
         Check(Wear.OfFlight(0, 0, 1, s) == 0, "sitting still adds no wear");
-        Check(Near(Wear.OfFlight(1250, 0.4, 2.5, s), 0.05, 1e-9), "half of 2,500 m/s adds 5%; heat under half its limit and G under 3 add nothing");
-        Check(Near(Wear.OfFlight(2500, 0.75, 6.5, s), 0.10 + 0.15 + 0.10, 1e-9), "2,500 m/s 10%, three-quarters of the heat limit 15%, 6.5 G 10%");
-        Check(Near(Wear.OfFlight(9000, 1.4, 25, s), 0.60, 1e-9), "each part of the rule stops at its top: 10% + 30% + 20%");
+        // Phil, 2026-11-24: G down to 5% at most ("my planes are getting nuked"), heat 25%, speed 15%.
+        Check(Near(Wear.OfFlight(1250, 0.4, 2.5, s), 0.075, 1e-9), "half of 2,500 m/s adds 7.5%; heat under half its limit and G under 3 add nothing");
+        Check(Near(Wear.OfFlight(2500, 0.75, 6.5, s), 0.15 + 0.125 + 0.025, 1e-9), "2,500 m/s 15%, three-quarters of the heat limit 12.5%, 6.5 G 2.5%");
+        Check(Near(Wear.OfFlight(9000, 1.4, 25, s), 0.45, 1e-9), "each part of the rule stops at its top: 15% + 25% + 5%");
         Check(Wear.After(0.9, 0.3) == 1 && Wear.WornOut(1) && !Wear.WornOut(0.99) && Wear.WornOut(0.996), "wear stops at 100%, which forces a refurbish");
         Check(Wear.Percent(0.234) == "23%" && Wear.Percent(1.2) == "100%", "wear shows as a whole percent");
         Check(Near(Pricing.OvertimeCharge(22220, 1, s), 5555, 0.01), "overtime on a fresh 22,220 build is +5,555");
@@ -95,6 +97,7 @@ static class CoreTests
         Check(Pricing.Duration(1.36 * 3600, s) == "1.4 hours", "duration text in hours (" + Pricing.Duration(1.36 * 3600, s) + ")");
         Settings t = Settings.FromNode(Node.Parse("buildBase = 10000\novertimeCost = 0.5\nbogus = 1\nlinesPerLevel = 2"));
         Check(t.BuildBase == 10000 && t.OvertimeCost == 0.5 && t.LinesPerLevel == 2 && t.BuildExponent == 0.8, "settings read from a config node, defaults kept");
+        Check(t.AssemblyShare == 0.05 && Settings.FromNode(Node.Parse("assemblyShare = 0")).AssemblyShare == 0 && Settings.FromNode(Node.Parse("assemblyShare = -1")).AssemblyShare == 0.05, "assembly is 5% unless set; 0 makes it free, a negative share is ignored");
     }
 
     sealed class FakeCosts : ICostSource
@@ -174,6 +177,8 @@ static class CoreTests
         Check(q.HangarShips.SetEquals(new[] { "oak", "comsat" }) && q.BinTaken.Count == 1 && q.BinTaken["battery|1000"] == 1, "the build knows which hangar ships it uses and what it takes from the bin");
         Check(q.Owners.Count == 2 && q.Owners[1] == "oak:0" && q.Owners[2] == "comsat:0", "the build knows which of its parts are which ship's hardware");
         Check(q.Lines.First(l => l.Kind == OwnerKind.Bin).Price == 0, "bin parts are already paid for");
+        Check(q.AssemblyParts == 2 && Near(q.AssemblyPrice, (16500 + 1000) * 0.05, 0.01), "assembly: the new upper stage and the bin battery are put on the ship, 5% of their price; the hangar ships' parts are already assembled (" + q.AssemblyPrice + ")");
+        Check(Near(q.BuildPrice, q.NewPrice + q.RefurbishPrice + q.AssemblyPrice, 1e-9) && Near(q.Total, q.BuildPrice + q.FuelPrice, 1e-9), "assembly is part of the build price (build time, overtime, outsourcing) and the total");
     }
 
     static Node PipModule(Node part, int mk)
@@ -321,6 +326,69 @@ static class CoreTests
         Check(ship.Placed.SequenceEqual(new[] { 0, 1 }) && Pieces.Validate(ship.Craft).Count == 0 && ship.Craft.Children("PART").Count() == 2, "the Kupe without the launcher under it is a valid craft of its own: its blueprint");
         PieceResult top = Pieces.Build(launch, new[] { 0, 1, 9 });
         Check(top.Unplaced.SequenceEqual(new[] { 9 }), "a part the launch never had can't be placed");
+    }
+
+    // Phil, 2026-11-24: "Putting a part on a ship costs 5% of its price for assembly. Parts already on a hangar ship are
+    // already assembled, so they don't pay it again."
+    static void AssemblyChecks()
+    {
+        var s = new Settings();
+        var costs = new FakeCosts();
+        var hangar = new FakeHangar();
+        hangar.Parts["peleus"] = new List<Node> { QuotePart("pod", 600, 10), QuotePart("tank", 300, 100), QuotePart("engine", 900, 0) };
+        hangar.Wear["peleus"] = 0.3;
+
+        // A new build: every part pays 5% of its dry price (fuel doesn't count), and it adds build time.
+        var fresh = new Node();
+        fresh.Nodes.Add(QuotePart("pod", 600, 10));
+        fresh.Nodes.Add(QuotePart("tank", 300, 100));
+        fresh.Nodes.Add(QuotePart("engine", 900, 0));
+        Quote qn = Quotes.Make(fresh, "Peleus", p => null, costs, s);
+        Check(qn.AssemblyParts == 3 && Near(qn.AssemblyPrice, 1800 * 0.05, 1e-6) && Near(qn.NewPrice, 1800, 1e-6), "a new build pays 5% of its parts' price for assembly, on top of the parts (" + qn.AssemblyPrice + ")");
+        Check(Near(qn.Seconds, Pricing.BuildSeconds(1800 + 90, s), 1e-6), "assembly takes build time like any work");
+        Check(Near(Pricing.OvertimeCharge(qn.BuildPrice, 1, s), 1890 * 0.25, 1e-6) && Near(Pricing.OutsourceCharge(qn.BuildPrice, 1, s), 1890, 1e-6), "overtime and outsourcing count assembly too");
+
+        // A build only from the parts bin: the parts are paid for, but putting them on isn't, so it isn't instant any more.
+        int binLeft = 3;
+        Quote qb = Quotes.Make(fresh, "Peleus", p => null, costs, s, p => binLeft-- > 0 ? new Owner { Kind = OwnerKind.Bin, BinKey = Hardware.PartName(p) } : null);
+        Check(qb.BinParts == 3 && qb.NewPrice == 0 && qb.AssemblyParts == 3 && Near(qb.AssemblyPrice, 90, 1e-6), "bin parts pay only their assembly (" + qb.AssemblyPrice + ")");
+        Check(qb.BuildPrice > 0 && qb.Seconds > 0, "a ship built only from bin parts takes time to put together");
+
+        // The same hangar ship opened in the VAB, unchanged: its parts are already on it.
+        var same = new Node();
+        same.Nodes.Add(QuotePart("pod", 600, 10, "peleus:0"));
+        same.Nodes.Add(QuotePart("tank", 300, 100, "peleus:1"));
+        same.Nodes.Add(QuotePart("engine", 900, 0, "peleus:2"));
+        Quote qs = Quotes.Make(same, "Peleus", hangar.OwnerOf, costs, s, null, hangar.PartsOf);
+        Check(qs.AssemblyParts == 0 && qs.AssemblyPrice == 0 && Near(qs.BuildPrice, qs.RefurbishPrice, 1e-9), "an unchanged hangar ship pays no assembly: refurbishing it is the whole build");
+        hangar.Wear["peleus"] = 0;
+        Quote qz = Quotes.Make(same, "Peleus", hangar.OwnerOf, costs, s, null, hangar.PartsOf);
+        Check(qz.BuildPrice == 0 && qz.Seconds == 0, "an unworn, unchanged hangar ship is still no build at all");
+        hangar.Wear["peleus"] = 0.3;
+
+        // The same ship with one part added: only that part is put on.
+        same.Nodes.Add(QuotePart("barometer", 50, 0));
+        Quote qa = Quotes.Make(same, "Peleus", hangar.OwnerOf, costs, s, null, hangar.PartsOf);
+        Check(qa.AssemblyParts == 1 && Near(qa.AssemblyPrice, 50 * 0.05, 1e-6), "adding one part to a built ship pays assembly on that one part (" + qa.AssemblyPrice + ")");
+
+        // Cargo added to a hangar part in the VAB: only what was added is put on.
+        var grown = new Node();
+        grown.Nodes.Add(QuotePart("pod", 700, 0, "peleus:0"));
+        Quote qg = Quotes.Make(grown, "Grown", p => { Owner o = hangar.OwnerOf(p); if (o != null) o.Added = 100; return o; }, costs, s, null, hangar.PartsOf);
+        Check(qg.AssemblyParts == 1 && Near(qg.AssemblyPrice, 100 * 0.05, 1e-6), "what was added to a hangar part pays assembly on the added amount only (" + qg.AssemblyPrice + ")");
+
+        // Restore: the ship's own parts are already on it; the parts it lost are put on again.
+        hangar.Parts["kupe"] = new List<Node> { QuotePart("pod", 600, 10), QuotePart("tank", 300, 100) };
+        hangar.Wear["kupe"] = 0.1;
+        Node restored = Hardware.Restore(fresh, new[] { 0, 1 }, hangar.Parts["kupe"], "kupe", out List<int> lost);
+        Quote qr = Quotes.Make(restored, "Kupe", hangar.OwnerOf, costs, s, null, hangar.PartsOf);
+        Check(lost.SequenceEqual(new[] { 2 }) && qr.HangarShips.Contains("kupe") && qr.AssemblyParts == 1 && Near(qr.AssemblyPrice, 900 * 0.05, 1e-6),
+              "Restore pays assembly on the part the ship lost, not on its own parts (" + qr.AssemblyPrice + ")");
+
+        // assemblyShare = 0: no assembly anywhere.
+        Settings free = Settings.FromNode(Node.Parse("assemblyShare = 0"));
+        Quote q0 = Quotes.Make(fresh, "Peleus", p => null, costs, free);
+        Check(q0.AssemblyParts == 0 && q0.AssemblyPrice == 0 && q0.BuildPrice == 1800, "with assemblyShare = 0 nothing pays assembly");
     }
 
     static Node Linked(string name, int id, int child)

@@ -82,7 +82,12 @@ namespace PhilsReusabilitySuite.Core
     {
         public readonly List<QuoteLine> Lines = new List<QuoteLine>();
         public double NewPrice, RefurbishPrice, FuelPrice;
-        public double BuildPrice => NewPrice + RefurbishPrice;
+        /// <summary>Putting parts on the ship: a share of the price of each new or bin part, and of what was added to a hangar
+        /// part. Parts already on a hangar ship are already assembled (Phil, 2026-11-24). How many parts pay it.</summary>
+        public double AssemblyPrice;
+        public int AssemblyParts;
+        /// <summary>The work: what sets build time, overtime and outsourcing.</summary>
+        public double BuildPrice => NewPrice + RefurbishPrice + AssemblyPrice;
         public double Total => BuildPrice + FuelPrice;
         public double Seconds;
         public int PartCount;
@@ -142,6 +147,8 @@ namespace PhilsReusabilitySuite.Core
                 // leaves the whole craft at 0%. Bin parts were refurbished as they went in, so they're already paid for.
                 double added = owner.Kind == OwnerKind.Hangar ? Math.Min(cost.Dry, owner.Added) : 0;
                 double price = owner.Kind == OwnerKind.New ? cost.Dry : owner.Kind == OwnerKind.Hangar ? (cost.Dry - added) * Pricing.RefurbishShare(owner.Wear, s) + added : 0;
+                // Assembly: a new or bin part is put on the ship; a hangar part is already on it, so only what was added to it is.
+                double assembly = (owner.Kind == OwnerKind.Hangar ? added : cost.Dry) * s.AssemblyShare;
 
                 // Fuel: a hangar ship's part only tops up what it came home with (a fuelled one is full); every other
                 // part is filled from empty (bin parts are emptied as they go in).
@@ -173,6 +180,7 @@ namespace PhilsReusabilitySuite.Core
                 line.Fuel += fuel;
                 if (owner.Kind == OwnerKind.New) q.NewPrice += price; else { q.RefurbishPrice += price - added; q.NewPrice += added; }
                 q.FuelPrice += fuel;
+                if (assembly > 0) { q.AssemblyPrice += assembly; q.AssemblyParts++; }
                 if (owner.Kind == OwnerKind.Hangar)
                 {
                     q.HangarShips.Add(owner.ShipId);

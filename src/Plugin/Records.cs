@@ -308,7 +308,9 @@ namespace PhilsReusabilitySuite
         /// the hangar ship it becomes once it's done).</summary>
         public string CraftId = HangarShip.NewId();
         public double NewPrice, RefurbishPrice, FuelPrice;
-        /// <summary>What was charged for the build itself (new parts, refurbishing and fuel): refunded on cancel.</summary>
+        /// <summary>Putting its new and bin parts on the ship (Quote.AssemblyPrice). 0 for builds queued before assembly was charged.</summary>
+        public double AssemblyPrice;
+        /// <summary>What was charged for the build itself (new parts, refurbishing, assembly and fuel): refunded on cancel.</summary>
         public double Paid;
         /// <summary>Share of the work done, 0 to 1.</summary>
         public double Progress;
@@ -321,7 +323,7 @@ namespace PhilsReusabilitySuite
         /// <summary>Parts it took from the parts bin, by kind (given back if it's cancelled).</summary>
         public readonly Dictionary<string, int> BinTaken = new Dictionary<string, int>();
 
-        public double BuildPrice => NewPrice + RefurbishPrice;
+        public double BuildPrice => NewPrice + RefurbishPrice + AssemblyPrice;
         public double Seconds(Core.Settings s) => Pricing.BuildSeconds(BuildPrice, s);
         public double Speed(Core.Settings s) => Overtime ? s.OvertimeSpeed : 1;
         public double SecondsLeft(Core.Settings s) => (1 - Progress) * Seconds(s) / Speed(s);
@@ -337,6 +339,7 @@ namespace PhilsReusabilitySuite
             n.AddValue("newPrice", NewPrice.ToString("R", CultureInfo.InvariantCulture));
             n.AddValue("refurbishPrice", RefurbishPrice.ToString("R", CultureInfo.InvariantCulture));
             n.AddValue("fuelPrice", FuelPrice.ToString("R", CultureInfo.InvariantCulture));
+            n.AddValue("assemblyPrice", AssemblyPrice.ToString("R", CultureInfo.InvariantCulture));
             n.AddValue("paid", Paid.ToString("R", CultureInfo.InvariantCulture));
             n.AddValue("progress", Progress.ToString("R", CultureInfo.InvariantCulture));
             n.AddValue("overtime", Overtime);
@@ -360,6 +363,7 @@ namespace PhilsReusabilitySuite
                 NewPrice = LaunchRecord.Num(n.GetValue("newPrice")),
                 RefurbishPrice = LaunchRecord.Num(n.GetValue("refurbishPrice")),
                 FuelPrice = LaunchRecord.Num(n.GetValue("fuelPrice")),
+                AssemblyPrice = LaunchRecord.Num(n.GetValue("assemblyPrice")),
                 Paid = LaunchRecord.Num(n.GetValue("paid")),
                 Progress = LaunchRecord.Num(n.GetValue("progress")),
                 Overtime = n.GetValue("overtime") == "True",

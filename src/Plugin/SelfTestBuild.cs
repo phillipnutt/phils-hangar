@@ -145,6 +145,8 @@ namespace PhilsReusabilitySuite
             Check(q1 != null && Near(q1.NewPrice, dry), "new parts cost KSP's own dry price (" + q1?.NewPrice + " vs " + dry + ")");
             Check(q1 != null && Near(q1.FuelPrice, fuel), "fuel costs KSP's own fuel price (" + q1?.FuelPrice + " vs " + fuel + ")");
             Check(q1 != null && q1.RefurbishPrice == 0 && panel.Editing == null && panel.ReadyShip == null, "a fresh design: nothing to refurbish, not a queued build, not a ready ship");
+            Check(q1 != null && q1.AssemblyParts == ship.parts.Count && Near(q1.AssemblyPrice, dry * S.AssemblyShare, 0.5) && Near(q1.BuildPrice, q1.NewPrice + q1.AssemblyPrice, 0.01),
+                  "assembly: every new part pays " + S.AssemblyShare.ToString("P0") + " of KSP's dry price, as part of the build price (" + q1?.AssemblyPrice + " for " + q1?.AssemblyParts + " parts)");
             yield return new WaitForSeconds(1f);
             Shot("build_panel_new");
             yield return new WaitForSeconds(1f);
@@ -214,6 +216,7 @@ namespace PhilsReusabilitySuite
             job2 = sc.Jobs.FirstOrDefault(j => j.Id == id2);
             Check(job1 != null && job2 != null, "both builds survived leaving the VAB");
             if (job1 == null || job2 == null) yield break;
+            Check(q2.AssemblyPrice > 0 && Near(job2.AssemblyPrice, q2.AssemblyPrice, 0.01) && Near(job2.BuildPrice, q2.BuildPrice, 0.01), "a queued build keeps its assembly through saving (" + Pricing.Funds(job2.AssemblyPrice) + ")");
             double left1 = job1.SecondsLeft(S);
             Planetarium.SetUniversalTime(Planetarium.GetUniversalTime() + left1 / 2);
             yield return new WaitForSeconds(1f);
@@ -338,7 +341,7 @@ namespace PhilsReusabilitySuite
             Check(stored.Wear < 0.02, "a recovery from the pad adds next to no wear (" + Core.Wear.Percent(stored.Wear) + ")");
             stored.Wear = 0.2;
             Quote rq = sc.QuoteFor(stored);
-            Check(rq.NewPrice == 0 && rq.RefurbishPrice > 0, "a refurbish has no new parts, only refurbishing (" + Pricing.Funds(rq.RefurbishPrice) + ")");
+            Check(rq.NewPrice == 0 && rq.AssemblyPrice == 0 && rq.RefurbishPrice > 0, "a refurbish has no new parts and no assembly, only refurbishing (" + Pricing.Funds(rq.RefurbishPrice) + ")");
             Check(Near(rq.RefurbishPrice, q1.NewPrice * 0.2 * S.RefurbishShare, 2), "at 20% wear the refurbish is 10% of its price (" + Pricing.Funds(rq.RefurbishPrice) + " of " + Pricing.Funds(q1.NewPrice) + ")");
             double f4 = Funds;
             BuildJob refit = sc.RefurbishBuild(stored, out string err2);
@@ -429,6 +432,7 @@ namespace PhilsReusabilitySuite
             Quote qb = panel.Quote;
             Check(qb.BinParts == partsStored && qb.NewPrice < 1, "every part comes from the bin (" + qb.BinParts + " of " + partsStored + "), nothing new");
             Check(qb.RefurbishPrice < 0.5, "bin parts were refurbished as they went in: nothing to refurbish (" + Pricing.Funds(qb.RefurbishPrice) + ")");
+            Check(qb.AssemblyParts == partsStored && Near(qb.AssemblyPrice, q1.AssemblyPrice, 0.5), "bin parts still pay their assembly, the same as new ones (" + Pricing.Funds(qb.AssemblyPrice) + ")");
             Check(Near(qb.FuelPrice, q1.FuelPrice, 1), "bin parts were emptied as they went in: the fuel is bought again (" + Pricing.Funds(qb.FuelPrice) + ")");
             Check(!EditorLogic.fetch.ship.parts.Any(EditorAddon.IsHardware) && panel.MainShip == null, "a design loaded from a file is new parts (current Mk), and no hangar ship");
             QuoteLine binLine = qb.Lines.FirstOrDefault(l => l.Kind == OwnerKind.Bin);
@@ -439,12 +443,17 @@ namespace PhilsReusabilitySuite
             yield return new WaitForSeconds(1f);
             sc = PRSScenario.Instance;
             Check(panel.Confirm(), "building from bin parts " + panel.Error);
-            // Bin parts are built parts already paid for: with nothing new, there's nothing to build, so it's ready at once.
-            Check(BinCount(sc) == 0 && !sc.Jobs.Any(), "the build took the " + partsStored + " parts out of the bin, and with nothing to build it's done at once");
+            // Bin parts are already paid for, but putting them together isn't (Phil, 2026-11-24): it's a build that takes time.
+            BuildJob binJob = sc.Jobs.LastOrDefault();
+            double binLeft = binJob?.SecondsLeft(S) ?? 0;
+            Check(BinCount(sc) == 0 && binJob != null && Near(binJob.BuildPrice, qb.AssemblyPrice) && Near(binLeft, Pricing.BuildSeconds(qb.AssemblyPrice, S), 1),
+                  "the build took the " + partsStored + " parts out of the bin and takes " + Pricing.Duration(binLeft, S) + " to assemble them");
 
             // 10. Launch it, and Sell it from the Recover prompt: the scrap money, nothing to the hangar.
             yield return ToSpaceCenter();
             sc = PRSScenario.Instance;
+            Planetarium.SetUniversalTime(Planetarium.GetUniversalTime() + binLeft + 5);
+            yield return new WaitForSeconds(1f);
             HangarShip ready3 = sc.Hangar.FirstOrDefault(h => h.Ready && h.Name == storedName);
             Check(ready3 != null && ready3.Id != storedId && ready3.DisplayName == storedName + " #3" && ready3.Flights == 0,
                   "the bin-part build is ready as a new ship with the next number, " + storedName + " #3, never flown (" + ready3?.DisplayName + ")");

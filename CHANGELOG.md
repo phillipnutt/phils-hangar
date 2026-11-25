@@ -8,6 +8,16 @@
 - **A new toolbar icon, in the look Phil's mods share:** a small rocket-shaped P and an orange hangar with an arched roof,
   in place of the old hangar outline.
 
+From Phil's play (2026-11-24):
+- **Assembly costs 5% of a part's price.** Putting a part on a ship costs 5% of its price (fuel not counted), for new
+  parts and parts from the parts bin. Parts already on a hangar ship are already assembled, so they don't pay it
+  again: a refurbish pays none, adding one part to a built ship pays for that one part, and Restore pays only for the
+  parts the ship lost. It's part of the build price, so it takes build time (a ship built only from bin parts is no
+  longer instant) and counts toward Overtime and Outsource. The Build panel shows it on a line of its own. The share is
+  `assemblyShare` in Settings.cfg (0 makes it free).
+- **New wear numbers: G wears a ship much less.** A flight now adds up to 15% for speed (was 10%), 25% for heat (was
+  30%) and 5% for G (was 20%), so planes aren't worn out by G any more. Wear already on a ship stays as it is.
+
 From Phil's play (2026-11-21):
 - **A part keeps its setup's price through launch, the hangar and the parts bin.** KSP saves its own copy of a launched
   ship before the ship's parts start, so a price a mod works out once a part starts was missing from it: Kerbalism's

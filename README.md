@@ -12,8 +12,9 @@ it hasn't had much real play yet. Back up your saves. The design is in [DESIGN.m
 ## What it does
 
 - **A build queue, and nothing else.** Press the green Launch button and you get the Build panel instead:
-  every piece of the ship on its own line, what it costs, and how long it takes. Build time follows the
-  price of the new parts: about a day for a small ship, ten for a big one. Pay for **Overtime** to build
+  every piece of the ship on its own line, what it costs, and how long it takes. Putting a part on a ship costs
+  5% of its price for assembly; parts already on a hangar ship are already assembled, so they don't pay it again.
+  Build time follows the price of the work: about a day for a small ship, ten for a big one. Pay for **Overtime** to build
   twice as fast, or **Outsource** to have it now. Each VAB or SPH level gives one build line. No facility
   upgrade times, no research times, no upgrade points.
 - **A hangar.** Finished builds wait in the hangar, ready, and launch at no extra cost. Recovered ships come
@@ -35,7 +36,8 @@ it hasn't had much real play yet. Back up your saves. The design is in [DESIGN.m
   while you watch from the Space Center or the Tracking Station too.
 - **A parts bin.** Loose parts, from ships you take apart, launchers that come home, and anything else that comes
   home without its ship, kept as a count of each kind of part. They're refurbished (and emptied of fuel) as they go
-  in, so new builds use them in place of new parts at no cost but their fuel, and the Build panel lists which ones.
+  in, so new builds use them in place of new parts at no cost but their fuel and assembly, and the Build panel lists
+  which ones.
 - **Phil's Iterative Parts.** New parts are always their program's current Mk, whether you build in the VAB or
   from the Space Center. Flown parts keep the Mk they were built at until you press **Update PIP parts** (in the
   parts bin or on a hangar ship). A build that could use an old-Mk bin part asks whether to update it first, or
@@ -79,7 +81,8 @@ they come home their parts go to the parts bin rather than the hangar.
 ## Settings
 
 Every number is in `GameData/PhilsReusabilitySuite/Settings.cfg`: the build-time curve, overtime and
-outsourcing prices, the wear rule and refurbish price, scrap value, build lines per level, and `requireDesign` (set it to
+outsourcing prices, the assembly share, the wear rule and refurbish price, scrap value, build lines per level, and
+`requireDesign` (set it to
 `false` to let unfiled ships come home to the hangar too).
 
 ## Building
